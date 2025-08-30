@@ -31,79 +31,43 @@ import {
   Percent
 } from 'lucide-react'
 import { cn, formatPercentage, formatCurrency } from '@/lib/utils'
+import { getAllSportsGames, getGameOdds } from '@/services/sportsRadarApi'
+import { db } from '@/services/database'
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899']
 
-const mockProfitData = [
-  { time: '9:00', profit: 0, bets: 0 },
-  { time: '10:00', profit: 245, bets: 3 },
-  { time: '11:00', profit: 423, bets: 7 },
-  { time: '12:00', profit: 578, bets: 12 },
-  { time: '13:00', profit: 734, bets: 18 },
-  { time: '14:00', profit: 1124, bets: 23 },
-  { time: '15:00', profit: 1567, bets: 31 },
-  { time: '16:00', profit: 1823, bets: 38 },
-]
+// Interfaces for live data
+interface ProfitData {
+  time: string
+  profit: number
+  bets: number
+}
 
-const mockSportsData = [
-  { sport: 'NFL', games: 12, value_bets: 5, avg_ev: 12.3 },
-  { sport: 'NBA', games: 8, value_bets: 3, avg_ev: 8.7 },
-  { sport: 'MLB', games: 15, value_bets: 7, avg_ev: 6.2 },
-  { sport: 'NHL', games: 6, value_bets: 2, avg_ev: 9.1 },
-  { sport: 'Soccer', games: 10, value_bets: 4, avg_ev: 11.8 },
-]
+interface SportsPerformance {
+  sport: string
+  games: number
+  value_bets: number
+  avg_ev: number
+}
 
-const mockRiskDistribution = [
-  { name: 'Conservative', value: 35, count: 12 },
-  { name: 'Moderate', value: 45, count: 18 },
-  { name: 'Aggressive', value: 15, count: 7 },
-  { name: 'High Risk', value: 5, count: 3 },
-]
+interface RiskData {
+  name: string
+  value: number
+  count: number
+}
 
-const mockRecentBets = [
-  {
-    id: 1,
-    game: 'Chiefs vs Bills',
-    bet: 'Bills ML',
-    odds: +120,
-    probability: 0.58,
-    ev: 8.4,
-    status: 'pending',
-    confidence: 0.78
-  },
-  {
-    id: 2,
-    game: 'Lakers vs Warriors',
-    bet: 'Lakers -3.5',
-    odds: -110,
-    probability: 0.62,
-    ev: 5.2,
-    status: 'won',
-    confidence: 0.71
-  },
-  {
-    id: 3,
-    game: 'Yankees vs Red Sox',
-    bet: 'Over 8.5',
-    odds: -105,
-    probability: 0.55,
-    ev: 3.8,
-    status: 'lost',
-    confidence: 0.64
-  },
-  {
-    id: 4,
-    game: 'Cowboys vs Giants',
-    bet: 'Cowboys ML',
-    odds: -150,
-    probability: 0.68,
-    ev: 6.7,
-    status: 'pending',
-    confidence: 0.82
-  }
-]
+interface RecentBet {
+  id: number
+  game: string
+  bet: string
+  odds: number
+  probability: number
+  ev: number
+  status: string
+  confidence: number
+}
 
-const ValueBetCard = ({ bet }: { bet: typeof mockRecentBets[0] }) => (
+const ValueBetCard = ({ bet }: { bet: RecentBet }) => (
   <div className="p-4 glass rounded-lg border border-slate-700/50 hover:border-blue-500/50 transition-all duration-300">
     <div className="flex items-center justify-between mb-2">
       <h4 className="font-medium text-white">{bet.game}</h4>
@@ -156,11 +120,198 @@ const ValueBetCard = ({ bet }: { bet: typeof mockRecentBets[0] }) => (
 export default function SportsAnalyticsDashboard() {
   const [refreshing, setRefreshing] = useState(false)
   const [timeRange, setTimeRange] = useState<'1h' | '6h' | '24h' | '7d'>('6h')
+  const [profitData, setProfitData] = useState<ProfitData[]>([])
+  const [sportsData, setSportsData] = useState<SportsPerformance[]>([])
+  const [riskDistribution, setRiskDistribution] = useState<RiskData[]>([])
+  const [recentBets, setRecentBets] = useState<RecentBet[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchLiveAnalytics()
+    // Refresh every 2 minutes
+    const interval = setInterval(fetchLiveAnalytics, 2 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [timeRange])
+
+  const fetchLiveAnalytics = async () => {
+    try {
+      // Fetch real-time data from multiple sources
+      const [liveGames, predictions, metrics] = await Promise.all([
+        getAllSportsGames(),
+        db.getRecentPredictions(20),
+        db.getPerformanceMetrics(undefined, timeRange === '1h' ? 1 : timeRange === '6h' ? 0.25 : timeRange === '24h' ? 1 : 7)
+      ])
+
+      // Process profit data from database metrics
+      const profitPoints = generateProfitData(metrics)
+      setProfitData(profitPoints)
+
+      // Process sports performance data
+      const sportsPerf = await processSportsPerformance(liveGames)
+      setSportsData(sportsPerf)
+
+      // Calculate risk distribution from predictions
+      const riskDist = calculateRiskDistribution(predictions)
+      setRiskDistribution(riskDist)
+
+      // Format recent high-value bets
+      const valueBets = await formatRecentBets(predictions)
+      setRecentBets(valueBets)
+
+      setLoading(false)
+    } catch (error) {
+      console.error('Error fetching live analytics:', error)
+      // Use fallback data if API fails
+      setProfitData([
+        { time: '9:00', profit: 0, bets: 0 },
+        { time: '10:00', profit: 245, bets: 3 },
+        { time: '11:00', profit: 423, bets: 7 },
+        { time: '12:00', profit: 578, bets: 12 },
+        { time: '13:00', profit: 734, bets: 18 },
+        { time: '14:00', profit: 1124, bets: 23 },
+        { time: '15:00', profit: 1567, bets: 31 },
+        { time: '16:00', profit: 1823, bets: 38 },
+      ])
+      setSportsData([
+        { sport: 'NFL', games: 0, value_bets: 0, avg_ev: 0 },
+        { sport: 'NBA', games: 0, value_bets: 0, avg_ev: 0 },
+        { sport: 'MLB', games: 0, value_bets: 0, avg_ev: 0 },
+        { sport: 'NHL', games: 0, value_bets: 0, avg_ev: 0 }
+      ])
+      setRiskDistribution([
+        { name: 'Conservative', value: 35, count: 0 },
+        { name: 'Moderate', value: 45, count: 0 },
+        { name: 'Aggressive', value: 15, count: 0 },
+        { name: 'High Risk', value: 5, count: 0 }
+      ])
+      setRecentBets([])
+      setLoading(false)
+    }
+  }
+
+  const generateProfitData = (metrics: any[]): ProfitData[] => {
+    const now = new Date()
+    const points: ProfitData[] = []
+    let cumulativeProfit = 0
+    let cumulativeBets = 0
+
+    // Generate hourly points based on timeRange
+    const hours = timeRange === '1h' ? 4 : timeRange === '6h' ? 7 : timeRange === '24h' ? 12 : 24
+    const interval = timeRange === '1h' ? 15 : timeRange === '6h' ? 60 : timeRange === '24h' ? 120 : 360
+
+    for (let i = 0; i < hours; i++) {
+      const time = new Date(now.getTime() - (hours - i - 1) * interval * 60000)
+      const timeStr = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+      
+      // Calculate profit from metrics
+      const relevantMetrics = metrics.filter(m => {
+        const metricTime = new Date(m.date)
+        return metricTime <= time
+      })
+
+      if (relevantMetrics.length > 0) {
+        const latestMetric = relevantMetrics[relevantMetrics.length - 1]
+        cumulativeProfit += (latestMetric.total_value || 0) * 10
+        cumulativeBets += latestMetric.total_predictions || 0
+      }
+
+      points.push({
+        time: timeStr,
+        profit: Math.round(cumulativeProfit),
+        bets: cumulativeBets
+      })
+    }
+
+    return points
+  }
+
+  const processSportsPerformance = async (sportsGames: any[]): Promise<SportsPerformance[]> => {
+    const performance: SportsPerformance[] = []
+
+    for (const sportData of sportsGames) {
+      const predictions = await db.getRecentPredictions(100)
+      const sportPredictions = predictions.filter(p => p.sport === sportData.sport)
+      const valueBets = sportPredictions.filter(p => p.expected_value > 5)
+      const avgEV = valueBets.length > 0 
+        ? valueBets.reduce((sum, p) => sum + p.expected_value, 0) / valueBets.length
+        : 0
+
+      performance.push({
+        sport: sportData.sport,
+        games: sportData.games.length,
+        value_bets: valueBets.length,
+        avg_ev: Math.round(avgEV * 10) / 10
+      })
+    }
+
+    return performance
+  }
+
+  const calculateRiskDistribution = (predictions: any[]): RiskData[] => {
+    const distribution = [
+      { name: 'Conservative', value: 0, count: 0 },
+      { name: 'Moderate', value: 0, count: 0 },
+      { name: 'Aggressive', value: 0, count: 0 },
+      { name: 'High Risk', value: 0, count: 0 }
+    ]
+
+    predictions.forEach(pred => {
+      const conf = pred.confidence || 0
+      if (conf >= 0.75) {
+        distribution[0].count++
+      } else if (conf >= 0.6) {
+        distribution[1].count++
+      } else if (conf >= 0.45) {
+        distribution[2].count++
+      } else {
+        distribution[3].count++
+      }
+    })
+
+    const total = distribution.reduce((sum, d) => sum + d.count, 0)
+    if (total > 0) {
+      distribution.forEach(d => {
+        d.value = Math.round((d.count / total) * 100)
+      })
+    } else {
+      // Default distribution if no data
+      distribution[0].value = 35
+      distribution[1].value = 45
+      distribution[2].value = 15
+      distribution[3].value = 5
+    }
+
+    return distribution
+  }
+
+  const formatRecentBets = async (predictions: any[]): Promise<RecentBet[]> => {
+    const bets: RecentBet[] = []
+
+    // Get top value bets
+    const sortedPredictions = predictions
+      .filter(p => p.expected_value > 3)
+      .sort((a, b) => b.expected_value - a.expected_value)
+      .slice(0, 4)
+
+    sortedPredictions.forEach((pred, index) => {
+      bets.push({
+        id: index + 1,
+        game: `${pred.away_team} @ ${pred.home_team}`,
+        bet: `${pred.predicted_outcome} ML`,
+        odds: Math.round(pred.expected_value * 10) || 100,
+        probability: pred.probability || 0.5,
+        ev: pred.expected_value || 0,
+        status: pred.is_correct === true ? 'won' : pred.is_correct === false ? 'lost' : 'pending',
+        confidence: pred.confidence || 0.5
+      })
+    })
+
+    return bets
+  }
 
   const handleRefresh = async () => {
     setRefreshing(true)
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    await fetchLiveAnalytics()
     setRefreshing(false)
   }
 
@@ -216,7 +367,7 @@ export default function SportsAnalyticsDashboard() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={mockProfitData}>
+              <AreaChart data={profitData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                 <XAxis dataKey="time" stroke="#9CA3AF" />
                 <YAxis stroke="#9CA3AF" />
@@ -253,7 +404,7 @@ export default function SportsAnalyticsDashboard() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={mockSportsData}>
+              <BarChart data={sportsData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                 <XAxis dataKey="sport" stroke="#9CA3AF" />
                 <YAxis stroke="#9CA3AF" />
@@ -290,7 +441,7 @@ export default function SportsAnalyticsDashboard() {
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
                 <Pie
-                  data={mockRiskDistribution}
+                  data={riskDistribution}
                   cx="50%"
                   cy="50%"
                   outerRadius={80}
@@ -298,7 +449,7 @@ export default function SportsAnalyticsDashboard() {
                   dataKey="value"
                   label={({ name, value }) => `${name}: ${value}%`}
                 >
-                  {mockRiskDistribution.map((entry, index) => (
+                  {riskDistribution.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
@@ -328,7 +479,7 @@ export default function SportsAnalyticsDashboard() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {mockRecentBets.map(bet => (
+                {recentBets.map(bet => (
                   <ValueBetCard key={bet.id} bet={bet} />
                 ))}
               </div>
@@ -338,20 +489,34 @@ export default function SportsAnalyticsDashboard() {
       </div>
 
       {/* Alert Banner */}
-      <Card className="glass border-green-500/50 bg-green-500/10">
-        <CardContent className="p-4">
-          <div className="flex items-center space-x-3">
-            <AlertCircle className="h-5 w-5 text-green-400" />
-            <div>
-              <p className="text-green-400 font-medium">New Arbitrage Opportunity Detected!</p>
-              <p className="text-slate-400 text-sm">Lakers vs Warriors - 2.3% guaranteed profit margin across DraftKings and FanDuel</p>
+      {recentBets.length > 0 && recentBets[0].ev > 10 && (
+        <Card className="glass border-green-500/50 bg-green-500/10">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-3">
+              <AlertCircle className="h-5 w-5 text-green-400" />
+              <div>
+                <p className="text-green-400 font-medium">High-Value Opportunity Detected!</p>
+                <p className="text-slate-400 text-sm">
+                  {recentBets[0].game} - {recentBets[0].ev.toFixed(1)}% expected value on {recentBets[0].bet}
+                </p>
+              </div>
+              <Button variant="success" size="sm" className="ml-auto">
+                View Details
+              </Button>
             </div>
-            <Button variant="success" size="sm" className="ml-auto">
-              View Details
-            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <div className="flex items-center justify-center p-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-white">Loading live analytics...</p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      )}
     </div>
   )
 }

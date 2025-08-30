@@ -20,6 +20,8 @@ import MoneylineDisplay from '@/components/MoneylineDisplay'
 import ParlayOptimizer from '@/components/ParlayOptimizer'
 import ProbabilityCalculator from '@/components/ProbabilityCalculator'
 import { DashboardStats } from '@/types/sports'
+import { getAllSportsGames } from '@/services/sportsRadarApi'
+import { db } from '@/services/database'
 
 const StatCard = ({ 
   title, 
@@ -79,22 +81,74 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Simulate loading and fetching initial stats
-    const timer = setTimeout(() => {
-      setDashboardStats({
-        total_games_analyzed: 156,
-        value_bets_found: 23,
-        avg_expected_value: 8.7,
-        avg_confidence: 0.742,
-        parlay_opportunities: 12,
-        arbitrage_opportunities: 3,
-        total_profit_potential: 2847.50
-      })
-      setIsLoading(false)
-    }, 1500)
-
-    return () => clearTimeout(timer)
+    fetchRealStats()
+    // Refresh stats every 5 minutes
+    const interval = setInterval(fetchRealStats, 5 * 60 * 1000)
+    return () => clearInterval(interval)
   }, [])
+
+  const fetchRealStats = async () => {
+    setIsLoading(true)
+    
+    try {
+      // Fetch real-time data from multiple sources
+      const [liveGames, predictions, metrics] = await Promise.all([
+        getAllSportsGames(),
+        db.getRecentPredictions(100),
+        db.getPerformanceMetrics()
+      ])
+      
+      // Calculate real statistics
+      const totalGames = liveGames.reduce((sum, sport) => sum + sport.games.length, 0)
+      const valueBets = predictions.filter(p => p.expected_value > 5)
+      const avgEV = valueBets.length > 0 
+        ? valueBets.reduce((sum, p) => sum + p.expected_value, 0) / valueBets.length
+        : 0
+      const avgConf = predictions.length > 0
+        ? predictions.reduce((sum, p) => sum + (p.confidence || 0), 0) / predictions.length
+        : 0
+      
+      // Calculate parlay opportunities (predictions that could be combined)
+      const parlayOpps = Math.min(
+        Math.floor(valueBets.length / 2),
+        15
+      )
+      
+      // Calculate arbitrage opportunities (simplified - would need cross-book comparison)
+      const arbOpps = valueBets.filter(p => p.expected_value > 15).length
+      
+      // Calculate profit potential
+      const profitPotential = valueBets.reduce((sum, p) => {
+        const stake = 100 // Base stake
+        const potentialReturn = stake * (p.expected_value / 100)
+        return sum + potentialReturn
+      }, 0)
+      
+      setDashboardStats({
+        total_games_analyzed: totalGames,
+        value_bets_found: valueBets.length,
+        avg_expected_value: Math.round(avgEV * 10) / 10,
+        avg_confidence: avgConf,
+        parlay_opportunities: parlayOpps,
+        arbitrage_opportunities: arbOpps,
+        total_profit_potential: Math.round(profitPotential * 100) / 100
+      })
+    } catch (error) {
+      console.error('Error fetching real stats:', error)
+      // Use fallback stats if API fails
+      setDashboardStats({
+        total_games_analyzed: 0,
+        value_bets_found: 0,
+        avg_expected_value: 0,
+        avg_confidence: 0,
+        parlay_opportunities: 0,
+        arbitrage_opportunities: 0,
+        total_profit_potential: 0
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">

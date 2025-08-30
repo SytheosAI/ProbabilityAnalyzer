@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "init": "python initialize_real_system.py",
+    "test-api": "python initialize_real_system.py",
+    "db:setup": "python initialize_real_system.py"
   },
   "dependencies": {
     "next": "14.0.4",
@@ -24,7 +27,9 @@
     "lucide-react": "^0.303.0",
     "recharts": "^2.9.0",
     "framer-motion": "^10.16.16",
-    "date-fns": "^2.30.0"
+    "date-fns": "^2.30.0",
+    "pg": "^8.11.3",
+    "axios": "^1.6.2"
   },
   "devDependencies": {
     "typescript": "^5.3.3",

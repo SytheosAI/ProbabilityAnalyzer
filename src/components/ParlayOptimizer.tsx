@@ -20,83 +20,9 @@ import {
 } from 'lucide-react'
 import { cn, formatPercentage, formatOdds, formatCurrency } from '@/lib/utils'
 import { Parlay, ParlayLeg } from '@/types/sports'
+import { db } from '@/services/database'
 
-const mockParlayLegs: ParlayLeg[] = [
-  {
-    team: "Buffalo Bills",
-    bet_type: "moneyline",
-    line: 0,
-    odds: 120,
-    probability: 0.52,
-    sport: "NFL",
-    game_id: "nfl_chiefs_bills"
-  },
-  {
-    team: "Los Angeles Lakers",
-    bet_type: "spread",
-    line: -3.5,
-    odds: -110,
-    probability: 0.58,
-    sport: "NBA", 
-    game_id: "nba_lakers_warriors"
-  },
-  {
-    team: "Boston Red Sox",
-    bet_type: "moneyline",
-    line: 0,
-    odds: 155,
-    probability: 0.48,
-    sport: "MLB",
-    game_id: "mlb_yankees_redsox"
-  },
-  {
-    team: "Vegas Golden Knights",
-    bet_type: "moneyline",
-    line: 0,
-    odds: -130,
-    probability: 0.62,
-    sport: "NHL",
-    game_id: "nhl_kings_knights"
-  }
-]
-
-const mockOptimizedParlays: Parlay[] = [
-  {
-    parlay_id: "parlay_1",
-    legs: mockParlayLegs.slice(0, 3),
-    combined_odds: 687,
-    total_probability: 0.148,
-    expected_value: 15.2,
-    risk_score: 0.42,
-    confidence_score: 0.73,
-    correlation_score: 0.15,
-    kelly_stake: 0.025,
-    key_factors: [
-      "Low correlation between legs",
-      "High confidence predictions",
-      "Favorable weather conditions"
-    ],
-    warnings: [],
-    sports_included: ["NFL", "NBA", "MLB"]
-  },
-  {
-    parlay_id: "parlay_2", 
-    legs: [mockParlayLegs[1], mockParlayLegs[3]],
-    combined_odds: 312,
-    total_probability: 0.3596,
-    expected_value: 9.8,
-    risk_score: 0.28,
-    confidence_score: 0.68,
-    correlation_score: 0.08,
-    kelly_stake: 0.032,
-    key_factors: [
-      "Both teams on home court/ice",
-      "Rest advantage for both teams"
-    ],
-    warnings: [],
-    sports_included: ["NBA", "NHL"]
-  }
-]
+// Live data interfaces - no more mocks!
 
 const RiskLevelSelector = ({ 
   riskLevel, 
@@ -331,15 +257,56 @@ export default function ParlayOptimizer() {
   const [maxParlays, setMaxParlays] = useState(10)
   const [minExpectedValue, setMinExpectedValue] = useState(8.0)
   const [maxCorrelation, setMaxCorrelation] = useState(0.3)
-  const [optimizedParlays, setOptimizedParlays] = useState(mockOptimizedParlays)
+  const [optimizedParlays, setOptimizedParlays] = useState<Parlay[]>([])
   const [isOptimizing, setIsOptimizing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [hasOptimized, setHasOptimized] = useState(false)
+  
+  // Auto-fetch on component mount
+  useEffect(() => {
+    handleOptimize()
+  }, [])
   
   const handleOptimize = async () => {
     setIsOptimizing(true)
-    // Simulate optimization process
-    await new Promise(resolve => setTimeout(resolve, 3000))
-    setOptimizedParlays(mockOptimizedParlays)
-    setIsOptimizing(false)
+    setError(null)
+    
+    try {
+      // Call LIVE parlay optimization API
+      const response = await fetch('/api/parlays/optimize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          riskLevel,
+          maxParlays,
+          minExpectedValue,
+          maxCorrelation
+        })
+      })
+      
+      const data = await response.json()
+      
+      if (data.success && data.parlays) {
+        setOptimizedParlays(data.parlays)
+        setHasOptimized(true)
+        
+        // Save successful optimization to database
+        if (data.parlays.length > 0) {
+          console.log(`Generated ${data.parlays.length} optimal parlays with avg EV: ${data.stats?.avg_expected_value?.toFixed(1)}%`)
+        }
+      } else {
+        setError(data.message || 'Failed to generate parlays')
+        setOptimizedParlays([])
+      }
+    } catch (err) {
+      console.error('Parlay optimization error:', err)
+      setError('Failed to connect to optimization service. Please try again.')
+      setOptimizedParlays([])
+    } finally {
+      setIsOptimizing(false)
+    }
   }
   
   const totalEV = optimizedParlays.reduce((sum, parlay) => sum + parlay.expected_value, 0)
@@ -471,10 +438,56 @@ export default function ParlayOptimizer() {
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold text-white">Optimized Parlays</h2>
           <div className="text-sm text-slate-400">
-            Sorted by Expected Value • Risk Level: 
-            <span className="capitalize text-white ml-1">{riskLevel}</span>
+            {optimizedParlays.length > 0 ? (
+              <>Sorted by Expected Value • Risk Level: <span className="capitalize text-white ml-1">{riskLevel}</span></>
+            ) : (
+              'No parlays generated yet'
+            )}
           </div>
         </div>
+        
+        {error && (
+          <Card className="glass border-red-500/50 bg-red-500/10">
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-3">
+                <AlertTriangle className="h-5 w-5 text-red-400" />
+                <div>
+                  <p className="text-red-400 font-medium">Error Generating Parlays</p>
+                  <p className="text-slate-400 text-sm">{error}</p>
+                </div>
+                <Button 
+                  onClick={handleOptimize} 
+                  variant="outline" 
+                  size="sm" 
+                  className="ml-auto text-white border-slate-700"
+                >
+                  Retry
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        
+        {!error && optimizedParlays.length === 0 && !isOptimizing && hasOptimized && (
+          <Card className="glass border-yellow-500/50 bg-yellow-500/10">
+            <CardContent className="p-8 text-center">
+              <AlertTriangle className="h-12 w-12 text-yellow-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-white mb-2">No Parlays Available</h3>
+              <p className="text-slate-400 mb-4">
+                Not enough games available that meet your criteria. Try adjusting your settings:
+              </p>
+              <ul className="text-sm text-slate-500 space-y-1 mb-4">
+                <li>• Lower the minimum expected value requirement</li>
+                <li>• Increase the risk tolerance level</li>
+                <li>• Allow higher correlation between legs</li>
+              </ul>
+              <Button onClick={handleOptimize} variant="default">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Try Again
+              </Button>
+            </CardContent>
+          </Card>
+        )}
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {optimizedParlays.map((parlay, index) => (

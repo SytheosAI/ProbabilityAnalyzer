@@ -15,103 +15,108 @@ import {
   Zap,
   Award,
   AlertTriangle,
-  CheckCircle
+  CheckCircle,
+  Loader2
 } from 'lucide-react'
 import { cn, formatPercentage, formatOdds, getValueRating, getConfidenceColor } from '@/lib/utils'
 import { MoneylinePrediction, Game } from '@/types/sports'
+import { getAllSportsGames, getGameOdds, getTeamStatistics } from '@/services/sportsRadarApi'
+import { db } from '@/services/database'
 
-const mockGames: Game[] = [
-  {
-    game_id: "nfl_chiefs_bills",
-    sport: "NFL",
-    home_team: "Kansas City Chiefs",
-    away_team: "Buffalo Bills",
-    home_moneyline: -140,
-    away_moneyline: 120,
-    game_time: "2024-01-15T20:00:00",
-    venue: "Arrowhead Stadium"
-  },
-  {
-    game_id: "nba_lakers_warriors",
-    sport: "NBA", 
-    home_team: "Los Angeles Lakers",
-    away_team: "Golden State Warriors",
-    home_moneyline: -110,
-    away_moneyline: -110,
-    game_time: "2024-01-15T22:00:00",
-    venue: "Crypto.com Arena"
-  },
-  {
-    game_id: "mlb_yankees_redsox",
-    sport: "MLB",
-    home_team: "New York Yankees", 
-    away_team: "Boston Red Sox",
-    home_moneyline: -180,
-    away_moneyline: 155,
-    game_time: "2024-01-15T19:05:00",
-    venue: "Yankee Stadium"
+// Real-time data fetching functions
+const fetchLiveGames = async (): Promise<Game[]> => {
+  try {
+    const sportsData = await getAllSportsGames();
+    const allGames: Game[] = [];
+    
+    for (const sportData of sportsData) {
+      for (const game of sportData.games) {
+        const formattedGame: Game = {
+          game_id: game.id,
+          sport: sportData.sport,
+          home_team: game.home_team.name || `${game.home_team.market} ${game.home_team.alias}`,
+          away_team: game.away_team.name || `${game.away_team.market} ${game.away_team.alias}`,
+          home_moneyline: -110, // Will be updated with real odds
+          away_moneyline: -110, // Will be updated with real odds
+          game_time: game.scheduled,
+          venue: game.venue?.name || 'TBD'
+        };
+        
+        // Fetch real odds for this game
+        try {
+          const odds = await getGameOdds(sportData.sport.toLowerCase(), game.id);
+          if (odds?.markets) {
+            const moneylineMarket = odds.markets.find(m => m.name === 'moneyline');
+            if (moneylineMarket?.books?.[0]?.outcomes) {
+              const homeOdds = moneylineMarket.books[0].outcomes.find(o => o.type === 'home');
+              const awayOdds = moneylineMarket.books[0].outcomes.find(o => o.type === 'away');
+              
+              if (homeOdds?.odds?.american) {
+                formattedGame.home_moneyline = parseInt(homeOdds.odds.american);
+              }
+              if (awayOdds?.odds?.american) {
+                formattedGame.away_moneyline = parseInt(awayOdds.odds.american);
+              }
+            }
+          }
+        } catch (oddsError) {
+          console.warn('Could not fetch odds for game:', game.id);
+        }
+        
+        allGames.push(formattedGame);
+        
+        // Save to database
+        await db.saveGame({
+          game_id: formattedGame.game_id,
+          sport: formattedGame.sport,
+          home_team: formattedGame.home_team,
+          away_team: formattedGame.away_team,
+          scheduled: new Date(formattedGame.game_time),
+          status: game.status
+        });
+      }
+    }
+    
+    return allGames;
+  } catch (error) {
+    console.error('Error fetching live games:', error);
+    return [];
   }
-]
+};
 
-const mockPredictions: MoneylinePrediction[] = [
-  {
-    game_id: "nfl_chiefs_bills",
-    team: "Buffalo Bills",
-    sport: "NFL",
-    american_odds: 120,
-    decimal_odds: 2.2,
-    implied_probability: 0.4545,
-    true_probability: 0.52,
-    expected_value: 8.4,
-    edge: 0.0655,
-    kelly_criterion: 0.035,
-    confidence_score: 0.78,
-    value_rating: "good",
-    key_factors: {
-      elo_differential: 25,
-      injury_impact: "Away team healthier",
-      weather_conditions: "Clear, 38°F"
-    }
-  },
-  {
-    game_id: "nba_lakers_warriors", 
-    team: "Los Angeles Lakers",
-    sport: "NBA",
-    american_odds: -110,
-    decimal_odds: 1.91,
-    implied_probability: 0.5238,
-    true_probability: 0.58,
-    expected_value: 6.3,
-    edge: 0.0562,
-    kelly_criterion: 0.028,
-    confidence_score: 0.71,
-    value_rating: "moderate",
-    key_factors: {
-      home_advantage: "Strong home record",
-      rest_advantage: "2 days vs 1 day rest",
-      injury_report: "Key players healthy"
-    }
-  },
-  {
-    game_id: "mlb_yankees_redsox",
-    team: "Boston Red Sox", 
-    sport: "MLB",
-    american_odds: 155,
-    decimal_odds: 2.55,
-    implied_probability: 0.3922,
-    true_probability: 0.48,
-    expected_value: 12.1,
-    edge: 0.0878,
-    kelly_criterion: 0.042,
-    confidence_score: 0.83,
-    value_rating: "excellent",
-    key_factors: {
-      pitching_matchup: "Favorable for away team",
-      bullpen_advantage: "Significantly better relief",
-      recent_form: "Won 7 of last 10"
+const generatePredictions = async (games: Game[]): Promise<MoneylinePrediction[]> => {
+  const predictions: MoneylinePrediction[] = [];
+  
+  for (const game of games) {
+    try {
+      // Call Python prediction API
+      const response = await fetch('/api/moneyline/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ game })
+      });
+      
+      if (response.ok) {
+        const prediction = await response.json();
+        predictions.push(prediction);
+        
+        // Save to database
+        await db.savePrediction({
+          game_id: game.game_id,
+          prediction_type: 'moneyline',
+          predicted_outcome: prediction.team,
+          confidence: prediction.confidence_score,
+          probability: prediction.true_probability,
+          expected_value: prediction.expected_value
+        });
+      }
+    } catch (error) {
+      console.error('Error generating prediction for game:', game.game_id, error);
     }
   }
-]
+  
+  return predictions;
+};
 
 const ValueIndicator = ({ rating }: { rating: 'excellent' | 'good' | 'moderate' | 'poor' }) => {
   const config = {
@@ -263,11 +268,45 @@ const MoneylineCard = ({ prediction, game }: { prediction: MoneylinePrediction, 
 }
 
 export default function MoneylineDisplay() {
-  const [predictions, setPredictions] = useState(mockPredictions)
-  const [games, setGames] = useState(mockGames)
-  const [loading, setLoading] = useState(false)
+  const [predictions, setPredictions] = useState<MoneylinePrediction[]>([])
+  const [games, setGames] = useState<Game[]>([])
+  const [loading, setLoading] = useState(true)
   const [filterSport, setFilterSport] = useState<string>('all')
   const [minExpectedValue, setMinExpectedValue] = useState(5)
+  const [error, setError] = useState<string | null>(null)
+  
+  // Fetch live data on component mount
+  useEffect(() => {
+    fetchRealData();
+    
+    // Refresh every 5 minutes
+    const interval = setInterval(fetchRealData, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [])
+  
+  const fetchRealData = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Fetch REAL live games from Sports Radar API
+      const liveGames = await fetchLiveGames();
+      setGames(liveGames);
+      
+      // Generate predictions based on real games
+      if (liveGames.length > 0) {
+        const livePredictions = await generatePredictions(liveGames);
+        setPredictions(livePredictions);
+      } else {
+        console.log('No live games available at this time');
+      }
+    } catch (err) {
+      console.error('Error fetching real data:', err);
+      setError('Failed to fetch live data. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
   
   const filteredPredictions = predictions.filter(pred => {
     const matchesSport = filterSport === 'all' || pred.sport.toLowerCase() === filterSport
@@ -276,10 +315,7 @@ export default function MoneylineDisplay() {
   })
   
   const handleRefresh = async () => {
-    setLoading(true)
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    setLoading(false)
+    await fetchRealData();
   }
   
   const totalEV = filteredPredictions.reduce((sum, pred) => sum + pred.expected_value, 0)
@@ -383,13 +419,41 @@ export default function MoneylineDisplay() {
         })}
       </div>
       
-      {filteredPredictions.length === 0 && (
+      {loading && (
+        <Card className="glass border-slate-700/50">
+          <CardContent className="p-12 text-center">
+            <Loader2 className="h-12 w-12 text-blue-400 mx-auto mb-4 animate-spin" />
+            <h3 className="text-xl font-semibold text-white mb-2">Fetching Live Data...</h3>
+            <p className="text-slate-400">
+              Connecting to Sports Radar API for real-time games and odds
+            </p>
+          </CardContent>
+        </Card>
+      )}
+      
+      {error && (
+        <Card className="glass border-slate-700/50">
+          <CardContent className="p-12 text-center">
+            <AlertTriangle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-white mb-2">Error Loading Data</h3>
+            <p className="text-slate-400 mb-4">{error}</p>
+            <Button onClick={handleRefresh} variant="default">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+      
+      {!loading && !error && filteredPredictions.length === 0 && (
         <Card className="glass border-slate-700/50">
           <CardContent className="p-12 text-center">
             <AlertTriangle className="h-12 w-12 text-yellow-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-white mb-2">No Value Bets Found</h3>
             <p className="text-slate-400 mb-4">
-              Try adjusting your filters or refresh to get the latest odds and analysis.
+              {games.length === 0 
+                ? 'No live games available at this time. Check back later for upcoming games.'
+                : 'Try adjusting your filters or refresh to get the latest odds and analysis.'}
             </p>
             <Button onClick={handleRefresh} variant="default">
               <RefreshCw className="h-4 w-4 mr-2" />
