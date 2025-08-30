@@ -20,7 +20,6 @@ import {
 } from 'lucide-react'
 import { cn, formatPercentage, formatOdds, formatCurrency } from '@/lib/utils'
 import { Parlay, ParlayLeg } from '@/types/sports'
-import { db } from '@/services/database'
 
 // Live data interfaces - no more mocks!
 

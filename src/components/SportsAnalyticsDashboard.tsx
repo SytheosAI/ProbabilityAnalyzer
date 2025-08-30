@@ -32,7 +32,6 @@ import {
 } from 'lucide-react'
 import { cn, formatPercentage, formatCurrency } from '@/lib/utils'
 import { getAllSportsGames, getGameOdds } from '@/services/sportsRadarApi'
-import { db } from '@/services/database'
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899']
 
@@ -135,19 +134,24 @@ export default function SportsAnalyticsDashboard() {
 
   const fetchLiveAnalytics = async () => {
     try {
-      // Fetch real-time data from multiple sources
-      const [liveGames, predictions, metrics] = await Promise.all([
-        getAllSportsGames(),
-        db.getRecentPredictions(20),
-        db.getPerformanceMetrics(undefined, timeRange === '1h' ? 1 : timeRange === '6h' ? 0.25 : timeRange === '24h' ? 1 : 7)
-      ])
+      // Fetch analytics data from API
+      const days = timeRange === '1h' ? 1 : timeRange === '6h' ? 0.25 : timeRange === '24h' ? 1 : 7;
+      const analyticsResponse = await fetch(`/api/analytics?timeRange=${timeRange}&days=${days}`)
+      const analyticsResult = await analyticsResponse.json()
+      
+      if (!analyticsResult.success) {
+        throw new Error(analyticsResult.message || 'Failed to fetch analytics')
+      }
+
+      const { predictions, metrics } = analyticsResult.data
+      const liveGames = await getAllSportsGames()
 
       // Process profit data from database metrics
       const profitPoints = generateProfitData(metrics)
       setProfitData(profitPoints)
 
       // Process sports performance data
-      const sportsPerf = await processSportsPerformance(liveGames)
+      const sportsPerf = await processSportsPerformance(liveGames, predictions)
       setSportsData(sportsPerf)
 
       // Calculate risk distribution from predictions
@@ -225,11 +229,10 @@ export default function SportsAnalyticsDashboard() {
     return points
   }
 
-  const processSportsPerformance = async (sportsGames: any[]): Promise<SportsPerformance[]> => {
+  const processSportsPerformance = async (sportsGames: any[], predictions: any[]): Promise<SportsPerformance[]> => {
     const performance: SportsPerformance[] = []
 
     for (const sportData of sportsGames) {
-      const predictions = await db.getRecentPredictions(100)
       const sportPredictions = predictions.filter(p => p.sport === sportData.sport)
       const valueBets = sportPredictions.filter(p => p.expected_value > 5)
       const avgEV = valueBets.length > 0 

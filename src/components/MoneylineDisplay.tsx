@@ -21,7 +21,6 @@ import {
 import { cn, formatPercentage, formatOdds, getValueRating, getConfidenceColor } from '@/lib/utils'
 import { MoneylinePrediction, Game } from '@/types/sports'
 import { getAllSportsGames, getGameOdds, getTeamStatistics } from '@/services/sportsRadarApi'
-import { db } from '@/services/database'
 
 // Real-time data fetching functions
 const fetchLiveGames = async (): Promise<Game[]> => {
@@ -65,14 +64,18 @@ const fetchLiveGames = async (): Promise<Game[]> => {
         
         allGames.push(formattedGame);
         
-        // Save to database
-        await db.saveGame({
-          game_id: formattedGame.game_id,
-          sport: formattedGame.sport,
-          home_team: formattedGame.home_team,
-          away_team: formattedGame.away_team,
-          scheduled: new Date(formattedGame.game_time),
-          status: game.status
+        // Save to database via API
+        await fetch('/api/games', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            game_id: formattedGame.game_id,
+            sport: formattedGame.sport,
+            home_team: formattedGame.home_team,
+            away_team: formattedGame.away_team,
+            scheduled: new Date(formattedGame.game_time),
+            status: game.status
+          })
         });
       }
     }
@@ -100,14 +103,18 @@ const generatePredictions = async (games: Game[]): Promise<MoneylinePrediction[]
         const prediction = await response.json();
         predictions.push(prediction);
         
-        // Save to database
-        await db.savePrediction({
-          game_id: game.game_id,
-          prediction_type: 'moneyline',
-          predicted_outcome: prediction.team,
-          confidence: prediction.confidence_score,
-          probability: prediction.true_probability,
-          expected_value: prediction.expected_value
+        // Save to database via API
+        await fetch('/api/predictions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            game_id: game.game_id,
+            prediction_type: 'moneyline',
+            predicted_outcome: prediction.team,
+            confidence: prediction.confidence_score,
+            probability: prediction.true_probability,
+            expected_value: prediction.expected_value
+          })
         });
       }
     } catch (error) {
