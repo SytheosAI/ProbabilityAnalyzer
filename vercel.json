@@ -1,29 +1,16 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/main.py",
-      "use": "@vercel/python",
-      "config": {
-        "runtime": "python3.9"
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "api/main.py"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/"
-    }
-  ],
+  "framework": "nextjs",
   "functions": {
     "api/main.py": {
-      "maxDuration": 30,
-      "runtime": "python3.9"
+      "runtime": "python3.9",
+      "maxDuration": 30
     }
   },
-  "installCommand": "pip install -r requirements-vercel.txt"
+  "rewrites": [
+    {
+      "source": "/api/python/:path*",
+      "destination": "/api/main"
+    }
+  ]
 }
