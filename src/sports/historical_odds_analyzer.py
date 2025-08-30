@@ -4,7 +4,6 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Tuple
-import sqlite3
 import json
 import logging
 from dataclasses import dataclass
@@ -12,6 +11,12 @@ import time
 from scipy import stats
 import warnings
 warnings.filterwarnings('ignore')
+
+# Import database connection
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from database.connection import get_db_manager, async_query, async_update
 
 logger = logging.getLogger(__name__)
 
@@ -42,9 +47,9 @@ class PatternResult:
 class HistoricalOddsAnalyzer:
     def __init__(self, config: Dict[str, Any]):
         self.config = config
-        self.db_path = config.get('db_path', './data/historical_odds.db')
-        self.odds_api_key = config.get('odds_api_key', '')
-        self.sports_radar_key = config.get('sports_radar_key', '')
+        self.db = get_db_manager()
+        self.odds_api_key = config.get('odds_api_key', '') or os.getenv('ODDS_API_KEY', '')
+        self.sports_radar_key = config.get('sports_radar_key', '') or os.getenv('SPORTS_RADAR_API_KEY', '')
         
         # API endpoints
         self.odds_api_base = "https://api.the-odds-api.com/v4"
@@ -54,7 +59,7 @@ class HistoricalOddsAnalyzer:
         self.cache_duration = config.get('cache_duration', 3600)
         self.max_requests_per_minute = config.get('max_requests_per_minute', 30)
         
-        # Initialize database
+        # Initialize database tables
         self._init_database()
         
         # Rate limiting
@@ -63,52 +68,77 @@ class HistoricalOddsAnalyzer:
         self.rate_limit_window = 60  # seconds
         
     def _init_database(self):
-        """Initialize SQLite database for historical odds storage"""
+        """Initialize PostgreSQL tables for historical odds storage"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
+            # Check if odds_history table exists, create if not
+            check_query = """
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = 'odds_history'
+                );
+            """
             
-            # Create odds table
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS odds_history (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    game_id TEXT,
-                    sport TEXT,
-                    date TEXT,
-                    team_home TEXT,
-                    team_away TEXT,
-                    bookmaker TEXT,
-                    market_type TEXT,
-                    line_value REAL,
-                    odds REAL,
-                    timestamp TEXT,
-                    closing_odds REAL,
-                    result TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
+            result = self.db.execute_query(check_query)
             
-            # Create patterns table
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS betting_patterns (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    pattern_name TEXT,
-                    sport TEXT,
-                    pattern_data TEXT,
-                    roi REAL,
-                    win_rate REAL,
-                    sample_size INTEGER,
-                    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
+            if not result[0]['exists']:
+                # Create odds_history table
+                create_odds_table = """
+                    CREATE TABLE odds_history (
+                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        game_id VARCHAR(100),
+                        sport VARCHAR(50),
+                        date TIMESTAMP,
+                        team_home VARCHAR(100),
+                        team_away VARCHAR(100),
+                        bookmaker VARCHAR(50),
+                        market_type VARCHAR(50),
+                        line_value DECIMAL(10,2),
+                        odds DECIMAL(10,2),
+                        timestamp TIMESTAMP,
+                        closing_odds DECIMAL(10,2),
+                        result VARCHAR(50),
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    
+                    CREATE INDEX idx_odds_game_id ON odds_history(game_id);
+                    CREATE INDEX idx_odds_sport_date ON odds_history(sport, date);
+                    CREATE INDEX idx_odds_bookmaker ON odds_history(bookmaker);
+                    CREATE INDEX idx_odds_market_type ON odds_history(market_type);
+                """
+                self.db.execute_update(create_odds_table)
+                logger.info("Created odds_history table")
             
-            # Create indexes for performance
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_odds_game_id ON odds_history(game_id)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_odds_sport_date ON odds_history(sport, date)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_odds_bookmaker ON odds_history(bookmaker)')
+            # Check if betting_patterns table exists
+            check_patterns = """
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = 'betting_patterns'
+                );
+            """
             
-            conn.commit()
-            conn.close()
+            result = self.db.execute_query(check_patterns)
+            
+            if not result[0]['exists']:
+                # Create betting_patterns table
+                create_patterns_table = """
+                    CREATE TABLE betting_patterns (
+                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        pattern_name VARCHAR(100),
+                        sport VARCHAR(50),
+                        pattern_data JSONB,
+                        roi DECIMAL(10,4),
+                        win_rate DECIMAL(10,4),
+                        sample_size INTEGER,
+                        confidence DECIMAL(5,4),
+                        last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    
+                    CREATE INDEX idx_patterns_sport ON betting_patterns(sport);
+                    CREATE INDEX idx_patterns_roi ON betting_patterns(roi DESC);
+                """
+                self.db.execute_update(create_patterns_table)
+                logger.info("Created betting_patterns table")
+            
             logger.info("Database initialized successfully")
             
         except Exception as e:
@@ -223,18 +253,16 @@ class HistoricalOddsAnalyzer:
         """Analyze historical odds data for betting patterns"""
         
         # Get historical data from database
-        conn = sqlite3.connect(self.db_path)
-        
-        cutoff_date = (datetime.now() - timedelta(days=lookback_days)).isoformat()
+        cutoff_date = datetime.now() - timedelta(days=lookback_days)
         
         query = '''
             SELECT * FROM odds_history 
-            WHERE sport = ? AND date >= ?
+            WHERE sport = %s AND date >= %s
             ORDER BY date DESC
         '''
         
-        df = pd.read_sql_query(query, conn, params=(sport, cutoff_date))
-        conn.close()
+        rows = self.db.execute_query(query, (sport, cutoff_date))
+        df = pd.DataFrame(rows)
         
         if df.empty:
             logger.warning(f"No historical data found for {sport}")

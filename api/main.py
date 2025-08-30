@@ -5,10 +5,18 @@ import numpy as np
 import logging
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
+import traceback
 
 # Import from parent directory
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Configure logging
+logging.basicConfig(
+    level=os.getenv('LOG_LEVEL', 'INFO'),
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 from src.core.probability_analyzer import ProbabilityAnalyzer, AnalysisType
 from src.core.sequential_calculator import SequentialProbabilityCalculator, Event
@@ -199,11 +207,12 @@ async def async_handler(request, response):
             }
     
     except Exception as e:
-        logger.error(f"API Error: {e}")
+        logger.error(f"API Error: {e}\n{traceback.format_exc()}")
         response_data = {
             'success': False,
             'error': 'Internal server error',
-            'message': str(e) if config.get('debug', False) else 'An error occurred processing your request'
+            'message': str(e) if os.getenv('DEBUG', 'false').lower() == 'true' else 'An error occurred processing your request',
+            'timestamp': datetime.now().isoformat()
         }
     
     response.status_code = 200
@@ -217,6 +226,13 @@ async def async_handler(request, response):
 async def handle_moneyline_prediction(master_predictor: MasterSportsPredictor, data: Dict[str, Any]) -> Dict[str, Any]:
     """Handle moneyline prediction requests"""
     try:
+        # Validate input
+        if not data:
+            return {
+                'success': False,
+                'error': 'No data provided',
+                'timestamp': datetime.now().isoformat()
+            }
         sport = data.get('sport', 'nfl')
         games = data.get('games', [])
         min_edge = data.get('min_edge', 0.03)
@@ -280,9 +296,12 @@ async def handle_moneyline_prediction(master_predictor: MasterSportsPredictor, d
         }
     
     except Exception as e:
+        logger.error(f"Moneyline prediction error: {e}\n{traceback.format_exc()}")
         return {
             'success': False,
-            'error': f'Moneyline prediction error: {str(e)}'
+            'error': 'Moneyline prediction failed',
+            'message': str(e) if os.getenv('DEBUG', 'false').lower() == 'true' else 'Failed to generate moneyline predictions',
+            'timestamp': datetime.now().isoformat()
         }
 
 async def handle_parlay_optimization(master_predictor: MasterSportsPredictor, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -374,9 +393,12 @@ async def handle_parlay_optimization(master_predictor: MasterSportsPredictor, da
         }
     
     except Exception as e:
+        logger.error(f"Parlay optimization error: {e}\n{traceback.format_exc()}")
         return {
             'success': False,
-            'error': f'Parlay optimization error: {str(e)}'
+            'error': 'Parlay optimization failed',
+            'message': str(e) if os.getenv('DEBUG', 'false').lower() == 'true' else 'Failed to generate parlay recommendations',
+            'timestamp': datetime.now().isoformat()
         }
 
 async def handle_comprehensive_analysis(master_predictor: MasterSportsPredictor, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -447,9 +469,12 @@ async def handle_comprehensive_analysis(master_predictor: MasterSportsPredictor,
         }
     
     except Exception as e:
+        logger.error(f"Comprehensive analysis error: {e}\n{traceback.format_exc()}")
         return {
             'success': False,
-            'error': f'Comprehensive analysis error: {str(e)}'
+            'error': 'Comprehensive analysis failed',
+            'message': str(e) if os.getenv('DEBUG', 'false').lower() == 'true' else 'Failed to perform comprehensive analysis',
+            'timestamp': datetime.now().isoformat()
         }
 
 async def handle_daily_recommendations(master_predictor: MasterSportsPredictor, data: Dict[str, Any]) -> Dict[str, Any]:

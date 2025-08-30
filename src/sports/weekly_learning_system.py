@@ -19,10 +19,15 @@ import torch.nn as nn
 import torch.optim as optim
 from dataclasses import dataclass, field
 from enum import Enum
-import sqlite3
 import threading
 import schedule
 import time
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +102,13 @@ class WeeklyLearningSystem:
         self.performance_history = []
         self.feedback_buffer = []
         self.pattern_memory = {}
-        self.db_path = config.get('db_path', './data/learning.db')
+        self.db_config = {
+            'host': os.getenv('DB_HOST', 'localhost'),
+            'port': int(os.getenv('DB_PORT', 5432)),
+            'database': os.getenv('DB_NAME', 'probability_analyzer'),
+            'user': os.getenv('DB_USER', 'postgres'),
+            'password': os.getenv('DB_PASSWORD', '')
+        }
         self._initialize_database()
         self.learning_thread = None
         self.is_learning = False
@@ -162,56 +173,66 @@ class WeeklyLearningSystem:
         )
     
     def _initialize_database(self):
-        """Initialize SQLite database for storing learning data"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        """Initialize PostgreSQL database for storing learning data"""
+        try:
+            conn = psycopg2.connect(**self.db_config)
+            cursor = conn.cursor()
+            
+            # Create tables using PostgreSQL syntax
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS ml_predictions (
+                    prediction_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    sport VARCHAR(50),
+                    bet_type VARCHAR(50),
+                    predicted_outcome DECIMAL(10,2),
+                    actual_outcome DECIMAL(10,2),
+                    confidence DECIMAL(5,2),
+                    odds DECIMAL(10,2),
+                    features JSONB,
+                    timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS pattern_occurrences (
+                    occurrence_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    pattern_type VARCHAR(100),
+                    pattern_data JSONB,
+                    success_rate DECIMAL(5,2),
+                    occurrences INTEGER,
+                    last_seen TIMESTAMP WITH TIME ZONE
+                )
+            ''')
         
-        # Create tables
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS predictions (
-                id TEXT PRIMARY KEY,
-                sport TEXT,
-                bet_type TEXT,
-                predicted_outcome REAL,
-                actual_outcome REAL,
-                confidence REAL,
-                odds REAL,
-                features TEXT,
-                timestamp DATETIME
-            )
-        ''')
-        
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS patterns (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                pattern_type TEXT,
-                pattern_data TEXT,
-                success_rate REAL,
-                occurrences INTEGER,
-                last_seen DATETIME
-            )
-        ''')
-        
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS performance (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                metric_type TEXT,
-                value REAL,
-                timestamp DATETIME
-            )
-        ''')
-        
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS model_weights (
-                model_name TEXT PRIMARY KEY,
-                weights BLOB,
-                performance REAL,
-                timestamp DATETIME
-            )
-        ''')
-        
-        conn.commit()
-        conn.close()
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS learning_cycles (
+                    cycle_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    metric_type VARCHAR(100),
+                    value DECIMAL(20,6),
+                    timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS ml_models (
+                    model_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    model_name VARCHAR(100) UNIQUE,
+                    weights BYTEA,
+                    performance DECIMAL(5,2),
+                    timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            # Create indexes
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_predictions_timestamp ON ml_predictions(timestamp DESC)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_patterns_type ON pattern_occurrences(pattern_type)')
+            
+            conn.commit()
+            conn.close()
+            logger.info("PostgreSQL database initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize database: {e}")
+            raise
     
     def start_weekly_learning(self):
         """Start the weekly learning cycle"""
