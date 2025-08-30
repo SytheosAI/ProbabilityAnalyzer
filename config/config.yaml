@@ -1,0 +1,81 @@
+app:
+  name: "Probability Analyzer"
+  version: "1.0.0"
+  debug: true
+
+data:
+  batch_size: 32
+  validation_split: 0.2
+  test_split: 0.1
+  cache_dir: "./data/cache"
+  raw_data_dir: "./data/raw"
+  processed_data_dir: "./data/processed"
+
+weather:
+  api_key: "${WEATHER_API_KEY}"
+  base_url: "https://api.openweathermap.org/data/2.5"
+  historical_url: "https://api.openweathermap.org/data/3.0/onecall/timemachine"
+  update_interval: 3600
+  cache_duration: 86400
+
+ml:
+  model_dir: "./models"
+  checkpoint_dir: "./models/checkpoints"
+  
+  yolo:
+    model_type: "yolov8n"
+    confidence_threshold: 0.5
+    iou_threshold: 0.45
+    device: "cuda"
+    
+  feedback_loop:
+    learning_rate: 0.001
+    batch_size: 16
+    epochs: 10
+    patience: 5
+    min_delta: 0.001
+    
+  pattern_recognition:
+    window_size: 100
+    stride: 10
+    min_pattern_length: 3
+    max_pattern_length: 50
+    similarity_threshold: 0.85
+
+probability:
+  monte_carlo_simulations: 10000
+  confidence_intervals: [0.90, 0.95, 0.99]
+  bayesian_prior_weight: 0.3
+  markov_chain_order: 3
+  
+sequential:
+  max_sequence_length: 20
+  transition_matrix_regularization: 0.01
+  dependency_threshold: 0.1
+
+database:
+  type: "postgresql"
+  host: "localhost"
+  port: 5432
+  name: "probability_analyzer"
+  user: "${DB_USER}"
+  password: "${DB_PASSWORD}"
+
+redis:
+  host: "localhost"
+  port: 6379
+  db: 0
+  password: "${REDIS_PASSWORD}"
+
+api:
+  host: "0.0.0.0"
+  port: 8000
+  workers: 4
+  cors_origins: ["*"]
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "./logs/app.log"
+  max_bytes: 10485760
+  backup_count: 5

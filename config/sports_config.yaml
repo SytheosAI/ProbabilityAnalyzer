@@ -1,0 +1,115 @@
+# Sports Analytics Configuration
+
+sports:
+  supported_sports:
+    - football
+    - basketball
+    - baseball
+    - soccer
+    - tennis
+    - hockey
+    - mma
+    - golf
+    
+  analysis:
+    elo_k_factor: 32
+    home_advantage: 0.03
+    injury_weight: 0.15
+    form_weight: 0.25
+    rest_advantage: 0.02
+    weather_impact_weight: 0.1
+    
+  ml_models:
+    transformer:
+      d_model: 256
+      nhead: 8
+      num_layers: 6
+      dropout: 0.1
+    
+    xgboost:
+      max_depth: 6
+      learning_rate: 0.05
+      n_estimators: 300
+      subsample: 0.8
+      
+    ensemble_weights:
+      xgboost: 0.25
+      lightgbm: 0.25
+      random_forest: 0.15
+      gradient_boosting: 0.15
+      transformer: 0.20
+      
+  betting:
+    kelly_fraction: 0.25  # Fractional Kelly for safety
+    max_bet_size: 0.05    # Max 5% of bankroll
+    min_edge: 0.02        # Minimum 2% edge to bet
+    confidence_threshold: 0.65
+    
+  data_sources:
+    odds_api:
+      key: "${ODDS_API_KEY}"
+      update_interval: 300  # 5 minutes
+      sports:
+        - americanfootball_nfl
+        - basketball_nba
+        - baseball_mlb
+        - soccer_epl
+        
+    sportsdata_io:
+      key: "${SPORTSDATA_IO_KEY}"
+      endpoints:
+        - scores
+        - injuries
+        - team_stats
+        - player_stats
+        
+    espn:
+      update_interval: 600
+      free_access: true
+      
+    action_network:
+      key: "${ACTION_NETWORK_KEY}"
+      features:
+        - public_betting
+        - sharp_money
+        - line_movement
+        - steam_moves
+        
+    weather_api:
+      key: "${WEATHER_API_KEY}"
+      relevant_sports:
+        - football
+        - baseball
+        - soccer
+        - golf
+        
+  backtesting:
+    starting_bankroll: 10000
+    commission: 0.05  # 5% commission on winnings
+    min_odds: 1.5
+    max_odds: 5.0
+    
+  risk_management:
+    max_daily_exposure: 0.2  # 20% of bankroll
+    max_single_bet: 0.05    # 5% of bankroll
+    stop_loss: 0.3          # Stop if down 30%
+    take_profit: 0.5        # Consider cashing out at 50% profit
+    
+  performance_tracking:
+    metrics:
+      - roi
+      - win_rate
+      - average_odds
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+    
+    reporting:
+      daily_summary: true
+      weekly_analysis: true
+      email_alerts: true
+      
+  database:
+    sports_db_url: "postgresql://user:pass@localhost/sports_analytics"
+    cache_ttl: 3600
+    historical_data_retention: 1095  # 3 years in days
