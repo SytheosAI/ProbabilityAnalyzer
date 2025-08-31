@@ -19,6 +19,7 @@ import SportsAnalyticsDashboard from '@/components/SportsAnalyticsDashboard'
 import MoneylineDisplay from '@/components/MoneylineDisplay'
 import ParlayOptimizer from '@/components/ParlayOptimizer'
 import ProbabilityCalculator from '@/components/ProbabilityCalculator'
+import LiveGamesTest from '@/components/LiveGamesTest'
 import { DashboardStats } from '@/types/sports'
 import { getAllSportsGames } from '@/services/sportsRadarApi'
 
@@ -66,7 +67,7 @@ const StatCard = ({
 )
 
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'moneylines' | 'parlays' | 'calculator'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'moneylines' | 'parlays' | 'calculator' | 'test'>('dashboard')
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
     total_games_analyzed: 0,
     value_bets_found: 0,
@@ -78,6 +79,8 @@ export default function HomePage() {
   })
   
   const [isLoading, setIsLoading] = useState(true)
+  const [isDemoMode, setIsDemoMode] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   useEffect(() => {
     fetchRealStats()
@@ -88,6 +91,7 @@ export default function HomePage() {
 
   const fetchRealStats = async () => {
     setIsLoading(true)
+    setErrorMessage(null)
     
     try {
       // Fetch dashboard stats from API
@@ -96,21 +100,29 @@ export default function HomePage() {
       
       if (result.success) {
         setDashboardStats(result.data)
+        setIsDemoMode(result.isDemo || false)
+        
+        if (result.isDemo) {
+          console.log('Using demo data mode')
+        }
       } else {
         throw new Error(result.message || 'Failed to fetch stats')
       }
     } catch (error) {
       console.error('Error fetching real stats:', error)
-      // Use fallback stats if API fails
-      setDashboardStats({
-        total_games_analyzed: 0,
-        value_bets_found: 0,
-        avg_expected_value: 0,
-        avg_confidence: 0,
-        parlay_opportunities: 0,
-        arbitrage_opportunities: 0,
-        total_profit_potential: 0
-      })
+      setErrorMessage('Unable to connect to live data. Using demo mode.')
+      setIsDemoMode(true)
+      
+      // Fetch demo stats as fallback
+      try {
+        const response = await fetch('/api/dashboard/stats')
+        const result = await response.json()
+        if (result.success) {
+          setDashboardStats(result.data)
+        }
+      } catch (fallbackError) {
+        console.error('Failed to fetch demo stats:', fallbackError)
+      }
     } finally {
       setIsLoading(false)
     }
@@ -131,6 +143,13 @@ export default function HomePage() {
                 <p className="text-sm text-slate-400">AI-Powered Sports Betting Intelligence</p>
               </div>
             </div>
+            
+            {/* Demo Mode Indicator */}
+            {isDemoMode && (
+              <div className="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-sm font-medium">
+                Demo Mode
+              </div>
+            )}
             
             <div className="flex items-center space-x-2">
               <Button
@@ -165,12 +184,53 @@ export default function HomePage() {
                 <Target className="h-4 w-4 mr-2" />
                 Calculator
               </Button>
+              <Button
+                variant={activeTab === 'test' ? 'default' : 'ghost'}
+                onClick={() => setActiveTab('test')}
+                className="text-white"
+              >
+                <Activity className="h-4 w-4 mr-2" />
+                API Test
+              </Button>
             </div>
           </div>
         </div>
       </header>
 
       <div className="container mx-auto px-6 py-8">
+        {/* Error Message Banner */}
+        {errorMessage && (
+          <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/50 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="h-5 w-5 text-yellow-400" />
+              <p className="text-yellow-400">{errorMessage}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Demo Mode Info Banner */}
+        {isDemoMode && activeTab === 'dashboard' && (
+          <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/50 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Activity className="h-5 w-5 text-blue-400" />
+                <div>
+                  <p className="text-blue-400 font-medium">Demo Mode Active</p>
+                  <p className="text-slate-400 text-sm">Displaying sample data. Configure Supabase to see live data.</p>
+                </div>
+              </div>
+              <Button
+                onClick={fetchRealStats}
+                variant="outline"
+                size="sm"
+                className="text-blue-400 border-blue-500/50 hover:bg-blue-500/20"
+              >
+                Retry Connection
+              </Button>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'dashboard' && (
           <div className="space-y-8">
             {/* Stats Overview */}
@@ -269,15 +329,48 @@ export default function HomePage() {
         {activeTab === 'calculator' && (
           <ProbabilityCalculator />
         )}
+
+        {activeTab === 'test' && (
+          <div className="space-y-6">
+            <div className="text-center space-y-2">
+              <h2 className="text-3xl font-bold text-white">Live API Test</h2>
+              <p className="text-slate-400 max-w-2xl mx-auto">
+                Testing direct Sports Radar API integration to verify live data is being fetched correctly
+              </p>
+            </div>
+            <LiveGamesTest />
+          </div>
+        )}
       </div>
 
       {/* Loading Overlay */}
       {isLoading && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="glass rounded-lg p-8 text-center space-y-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-            <h3 className="text-xl font-semibold text-white">Loading Sports Data</h3>
-            <p className="text-slate-400">Analyzing current games and generating predictions...</p>
+          <div className="glass rounded-lg p-8 text-center space-y-6 max-w-md">
+            <div className="relative">
+              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500 mx-auto"></div>
+              <div className="absolute inset-0 rounded-full h-16 w-16 border-t-4 border-green-400 animate-ping mx-auto opacity-75"></div>
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-semibold text-white">Initializing Analytics</h3>
+              <p className="text-slate-400">Connecting to sports data feeds and calculating probabilities...</p>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-500">Fetching live games</span>
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-100"></div>
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-200"></div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-500">Processing predictions</span>
+                <div className="w-32 bg-slate-700 rounded-full h-1">
+                  <div className="bg-gradient-to-r from-blue-500 to-green-500 h-1 rounded-full animate-pulse" style={{width: '75%'}}></div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -3,7 +3,7 @@
  * Real database for real data storage using Supabase!
  */
 
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
 import type { Database } from '@/lib/supabase';
 
 type GameRow = Database['public']['Tables']['games']['Row'];
@@ -26,6 +26,12 @@ class DatabaseService {
 
   private async initializeDatabase() {
     try {
+      if (!isSupabaseConfigured) {
+        console.warn('Supabase is not configured. Database operations will be simulated.');
+        this.initialized = false;
+        return;
+      }
+      
       // Test connection
       const { data, error } = await supabaseAdmin.from('games').select('count').limit(1);
       if (error) {
@@ -40,6 +46,10 @@ class DatabaseService {
 
   // Save game data
   async saveGame(gameData: any): Promise<void> {
+    if (!isSupabaseConfigured) {
+      console.log('Supabase not configured - skipping game save:', gameData.game_id);
+      return;
+    }
     const gameRecord: GameInsert = {
       game_id: gameData.game_id,
       sport: gameData.sport,
@@ -64,6 +74,10 @@ class DatabaseService {
 
   // Save prediction
   async savePrediction(prediction: any): Promise<void> {
+    if (!isSupabaseConfigured) {
+      console.log('Supabase not configured - skipping prediction save');
+      return;
+    }
     const predictionRecord: PredictionInsert = {
       game_id: prediction.game_id,
       prediction_type: prediction.prediction_type,
@@ -84,6 +98,10 @@ class DatabaseService {
 
   // Save odds data
   async saveOdds(oddsData: any): Promise<void> {
+    if (!isSupabaseConfigured) {
+      console.log('Supabase not configured - skipping odds save');
+      return;
+    }
     const oddsRecord: OddsInsert = {
       game_id: oddsData.game_id,
       book_name: oddsData.book_name || null,
@@ -107,6 +125,10 @@ class DatabaseService {
 
   // Save parlay
   async saveParlay(parlay: any): Promise<void> {
+    if (!isSupabaseConfigured) {
+      console.log('Supabase not configured - skipping parlay save');
+      return;
+    }
     const parlayRecord: ParlayInsert = {
       parlay_id: parlay.parlay_id,
       legs: parlay.legs,
@@ -131,6 +153,10 @@ class DatabaseService {
 
   // Save team statistics
   async saveTeamStats(stats: any): Promise<void> {
+    if (!isSupabaseConfigured) {
+      console.log('Supabase not configured - skipping team stats save');
+      return;
+    }
     const teamStatsRecord: TeamStatsInsert = {
       team_id: stats.team_id,
       sport: stats.sport,
@@ -159,6 +185,10 @@ class DatabaseService {
 
   // Get recent predictions
   async getRecentPredictions(limit: number = 10): Promise<any[]> {
+    if (!isSupabaseConfigured) {
+      console.log('Supabase not configured - returning empty predictions');
+      return [];
+    }
     const { data, error } = await supabaseAdmin
       .from('predictions')
       .select(`
@@ -182,6 +212,10 @@ class DatabaseService {
 
   // Get performance metrics
   async getPerformanceMetrics(sport?: string, days: number = 30): Promise<any[]> {
+    if (!isSupabaseConfigured) {
+      console.log('Supabase not configured - returning empty metrics');
+      return [];
+    }
     let query = supabaseAdmin
       .from('performance_metrics')
       .select('*')
@@ -232,6 +266,10 @@ class DatabaseService {
 
   // Get upcoming games with predictions
   async getUpcomingGamesWithPredictions(): Promise<any[]> {
+    if (!isSupabaseConfigured) {
+      console.log('Supabase not configured - returning empty games list');
+      return [];
+    }
     const { data, error } = await supabaseAdmin
       .from('games')
       .select(`
@@ -386,6 +424,10 @@ class DatabaseService {
 
   // Health check method
   async healthCheck(): Promise<boolean> {
+    if (!isSupabaseConfigured) {
+      return false;
+    }
+    
     try {
       const { data, error } = await supabaseAdmin
         .from('games')

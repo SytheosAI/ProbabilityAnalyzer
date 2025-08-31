@@ -5,19 +5,40 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// Use dummy values if environment variables are not set
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-key';
+
+// Check if we have valid Supabase credentials
+const hasValidSupabaseConfig = 
+  supabaseUrl !== 'https://placeholder.supabase.co' && 
+  supabaseAnonKey !== 'placeholder-anon-key' &&
+  supabaseServiceRoleKey !== 'placeholder-service-key';
 
 // Client-side Supabase client (uses anon key)
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = hasValidSupabaseConfig 
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null as any; // Fallback when no valid config
 
 // Server-side Supabase client (uses service role key for admin operations)
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  }
+export const supabaseAdmin = hasValidSupabaseConfig
+  ? createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
+  : null as any; // Fallback when no valid config
+
+// Export a flag to check if Supabase is configured
+export const isSupabaseConfigured = hasValidSupabaseConfig;
+
+console.log('Supabase configuration status:', {
+  configured: hasValidSupabaseConfig,
+  url: supabaseUrl.substring(0, 30) + '...',
+  hasAnonKey: supabaseAnonKey !== 'placeholder-anon-key',
+  hasServiceKey: supabaseServiceRoleKey !== 'placeholder-service-key'
 });
 
 // Database table types for better TypeScript support

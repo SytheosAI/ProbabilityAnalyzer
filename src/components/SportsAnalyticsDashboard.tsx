@@ -32,6 +32,13 @@ import {
 } from 'lucide-react'
 import { cn, formatPercentage, formatCurrency } from '@/lib/utils'
 import { getAllSportsGames, getGameOdds } from '@/services/sportsRadarApi'
+import { 
+  getDemoProfitData, 
+  getDemoSportsPerformance, 
+  getDemoRiskDistribution, 
+  getDemoRecentBets,
+  shouldUseDemoData 
+} from '@/services/demoDataService'
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899']
 
@@ -134,6 +141,17 @@ export default function SportsAnalyticsDashboard() {
 
   const fetchLiveAnalytics = async () => {
     try {
+      // Check if we should use demo data
+      if (shouldUseDemoData()) {
+        console.log('Using demo data for analytics dashboard')
+        setProfitData(getDemoProfitData(8))
+        setSportsData(getDemoSportsPerformance())
+        setRiskDistribution(getDemoRiskDistribution())
+        setRecentBets(getDemoRecentBets())
+        setLoading(false)
+        return
+      }
+
       // Fetch analytics data from API
       const days = timeRange === '1h' ? 1 : timeRange === '6h' ? 0.25 : timeRange === '24h' ? 1 : 7;
       const analyticsResponse = await fetch(`/api/analytics?timeRange=${timeRange}&days=${days}`)
@@ -144,15 +162,28 @@ export default function SportsAnalyticsDashboard() {
       }
 
       const { predictions, metrics } = analyticsResult.data
+      const isDemo = analyticsResult.isDemo || false
+
+      // If API returned demo data, use our enhanced demo data instead
+      if (isDemo || (predictions.length === 0 && metrics.length === 0)) {
+        console.log('API returned empty/demo data, using enhanced demo data')
+        setProfitData(getDemoProfitData(8))
+        setSportsData(getDemoSportsPerformance())
+        setRiskDistribution(getDemoRiskDistribution())
+        setRecentBets(getDemoRecentBets())
+        setLoading(false)
+        return
+      }
+
       const liveGames = await getAllSportsGames()
 
       // Process profit data from database metrics
       const profitPoints = generateProfitData(metrics)
-      setProfitData(profitPoints)
+      setProfitData(profitPoints.length > 0 ? profitPoints : getDemoProfitData(8))
 
       // Process sports performance data
       const sportsPerf = await processSportsPerformance(liveGames, predictions)
-      setSportsData(sportsPerf)
+      setSportsData(sportsPerf.length > 0 ? sportsPerf : getDemoSportsPerformance())
 
       // Calculate risk distribution from predictions
       const riskDist = calculateRiskDistribution(predictions)
@@ -160,35 +191,16 @@ export default function SportsAnalyticsDashboard() {
 
       // Format recent high-value bets
       const valueBets = await formatRecentBets(predictions)
-      setRecentBets(valueBets)
+      setRecentBets(valueBets.length > 0 ? valueBets : getDemoRecentBets())
 
       setLoading(false)
     } catch (error) {
       console.error('Error fetching live analytics:', error)
-      // Use fallback data if API fails
-      setProfitData([
-        { time: '9:00', profit: 0, bets: 0 },
-        { time: '10:00', profit: 245, bets: 3 },
-        { time: '11:00', profit: 423, bets: 7 },
-        { time: '12:00', profit: 578, bets: 12 },
-        { time: '13:00', profit: 734, bets: 18 },
-        { time: '14:00', profit: 1124, bets: 23 },
-        { time: '15:00', profit: 1567, bets: 31 },
-        { time: '16:00', profit: 1823, bets: 38 },
-      ])
-      setSportsData([
-        { sport: 'NFL', games: 0, value_bets: 0, avg_ev: 0 },
-        { sport: 'NBA', games: 0, value_bets: 0, avg_ev: 0 },
-        { sport: 'MLB', games: 0, value_bets: 0, avg_ev: 0 },
-        { sport: 'NHL', games: 0, value_bets: 0, avg_ev: 0 }
-      ])
-      setRiskDistribution([
-        { name: 'Conservative', value: 35, count: 0 },
-        { name: 'Moderate', value: 45, count: 0 },
-        { name: 'Aggressive', value: 15, count: 0 },
-        { name: 'High Risk', value: 5, count: 0 }
-      ])
-      setRecentBets([])
+      // Use enhanced demo data if API fails
+      setProfitData(getDemoProfitData(8))
+      setSportsData(getDemoSportsPerformance())
+      setRiskDistribution(getDemoRiskDistribution())
+      setRecentBets(getDemoRecentBets())
       setLoading(false)
     }
   }
@@ -513,10 +525,19 @@ export default function SportsAnalyticsDashboard() {
 
       {/* Loading State */}
       {loading && (
-        <div className="flex items-center justify-center p-8">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <p className="text-white">Loading live analytics...</p>
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="glass rounded-lg p-8 text-center space-y-4 max-w-md">
+            <div className="relative">
+              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500 mx-auto"></div>
+              <div className="absolute inset-0 rounded-full h-16 w-16 border-t-4 border-blue-300 animate-ping mx-auto"></div>
+            </div>
+            <h3 className="text-xl font-semibold text-white">Loading Analytics</h3>
+            <p className="text-slate-400">Processing real-time sports data and generating insights...</p>
+            <div className="flex items-center justify-center space-x-2 text-sm text-slate-500">
+              <span className="animate-pulse">•</span>
+              <span className="animate-pulse delay-100">•</span>
+              <span className="animate-pulse delay-200">•</span>
+            </div>
           </div>
         </div>
       )}
