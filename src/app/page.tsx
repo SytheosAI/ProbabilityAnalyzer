@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense, lazy } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { 
@@ -14,12 +14,26 @@ import {
   Activity,
   Eye,
   Percent,
-  AlertCircle
+  AlertCircle,
+  Play,
+  Flame,
+  TrendingDown,
+  Map,
+  Settings,
+  ChevronDown
 } from 'lucide-react'
 import LiveSportsDashboard from '@/components/LiveSportsDashboard'
 import MoneylineDisplay from '@/components/MoneylineDisplay'
+import AdvancedMoneylineDisplay from '@/components/advanced/AdvancedMoneylineDisplay'
 import ParlayOptimizer from '@/components/ParlayOptimizer'
+import AdvancedParlayOptimizer from '@/components/advanced/AdvancedParlayOptimizer'
 import ProbabilityCalculator from '@/components/ProbabilityCalculator'
+import EnhancedDashboard from '@/components/EnhancedDashboard'
+
+// Lazy load heavy components for performance
+const ProfessionalAnalytics = lazy(() => import('@/components/analytics/ProfessionalAnalytics'))
+const LiveBettingInterface = lazy(() => import('@/components/live/LiveBettingInterface'))
+const InteractiveHeatMap = lazy(() => import('@/components/charts/InteractiveHeatMap'))
 import { DashboardStats } from '@/types/sports'
 
 const StatCard = ({ 
@@ -66,53 +80,72 @@ const StatCard = ({
 )
 
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'moneylines' | 'parlays' | 'calculator'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'moneylines' | 'parlays' | 'calculator' | 'analytics' | 'live_betting' | 'heatmaps'>('dashboard')
+  const [showAdvancedDropdown, setShowAdvancedDropdown] = useState(false)
   const [liveDataStats, setLiveDataStats] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [selectedDays, setSelectedDays] = useState<1 | 3 | 5>(3)
+  const dropdownRef = React.useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetchLiveData()
-  }, [])
+  }, [selectedDays])
+
+  // Handle click outside dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowAdvancedDropdown(false)
+      }
+    }
+
+    if (showAdvancedDropdown) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showAdvancedDropdown])
 
   const fetchLiveData = async () => {
     setIsLoading(true)
     setErrorMessage(null)
     
     try {
-      // Try live data first
-      const response = await fetch('/api/sports/live-data?analysis=true')
+      // Try new live games API first
+      const response = await fetch(`/api/sports/live-games?days=${selectedDays}`)
       const result = await response.json()
       
       if (result.success && result.data.stats.totalGames > 0) {
         setLiveDataStats(result.data.stats)
+        setErrorMessage(null)
+        console.log(`✅ Loaded ${result.data.stats.totalGames} games for next 3 days`)
       } else {
         // Fallback to demo data
-        console.log('Live data unavailable, using demo data')
+        console.log('Live games unavailable, using demo data')
         const demoResponse = await fetch('/api/sports/demo-data')
         const demoResult = await demoResponse.json()
         
         if (demoResult.success) {
           setLiveDataStats(demoResult.data.stats)
-          setErrorMessage('Using demo data - Live sports APIs currently unavailable (off-season)')
+          setErrorMessage('Using demo data - Live sports APIs currently unavailable')
         } else {
           throw new Error('Both live and demo data failed')
         }
       }
     } catch (error) {
       console.error('Error fetching data:', error)
-      // Set fallback stats
+      // Set fallback stats with realistic numbers
       setLiveDataStats({
-        totalGames: 8,
-        liveGames: 0,
-        sportsActive: 12,
-        predictionsGenerated: 32,
-        avgConfidence: 0.75,
-        valueBetsFound: 3,
-        arbitrageOpportunities: 1,
-        topValueBets: [{ expectedValue: 15.2 }]
+        totalGames: 24,
+        liveGames: 3,
+        sportsActive: 8,
+        predictionsGenerated: 96,
+        avgConfidence: 0.73,
+        valueBetsFound: 7,
+        arbitrageOpportunities: 2,
+        topValueBets: [{ expectedValue: 15.2 }, { expectedValue: 12.8 }, { expectedValue: 9.4 }]
       })
-      setErrorMessage('Using offline mode - Connect to internet for live data')
+      setErrorMessage('Using offline mode - Refresh to try live data')
     } finally {
       setIsLoading(false)
     }
@@ -134,9 +167,20 @@ export default function HomePage() {
               </div>
             </div>
             
-            {/* Live Data Indicator */}
-            <div className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm font-medium animate-pulse">
-              LIVE DATA
+            {/* Day Filter and Live Data Indicator */}
+            <div className="flex items-center space-x-3">
+              <select
+                value={selectedDays}
+                onChange={(e) => setSelectedDays(Number(e.target.value) as 1 | 3 | 5)}
+                className="bg-slate-800/80 border border-slate-600/50 rounded-lg px-3 py-1 text-white text-sm focus:outline-none focus:border-blue-500"
+              >
+                <option value={1}>Next 1 Day</option>
+                <option value={3}>Next 3 Days</option>
+                <option value={5}>Next 5 Days</option>
+              </select>
+              <div className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm font-medium animate-pulse">
+                LIVE DATA
+              </div>
             </div>
             
             <div className="flex items-center space-x-2">
@@ -154,7 +198,7 @@ export default function HomePage() {
                 className="text-white"
               >
                 <TrendingUp className="h-4 w-4 mr-2" />
-                Moneylines
+                Markets
               </Button>
               <Button
                 variant={activeTab === 'parlays' ? 'default' : 'ghost'}
@@ -165,23 +209,72 @@ export default function HomePage() {
                 Parlays
               </Button>
               <Button
-                variant={activeTab === 'calculator' ? 'default' : 'ghost'}
-                onClick={() => setActiveTab('calculator')}
+                variant={activeTab === 'analytics' ? 'default' : 'ghost'}
+                onClick={() => setActiveTab('analytics')}
                 className="text-white"
               >
-                <Target className="h-4 w-4 mr-2" />
-                Calculator
+                <Trophy className="h-4 w-4 mr-2" />
+                Analytics
               </Button>
               <Button
-                onClick={() => {
-                  console.log('Navigating to GPU training...');
-                  window.open('/gpu-training', '_blank');
-                }}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                variant={activeTab === 'live_betting' ? 'default' : 'ghost'}
+                onClick={() => setActiveTab('live_betting')}
+                className="text-white"
               >
-                <Zap className="h-4 w-4 mr-2" />
-                GPU Training
+                <Play className="h-4 w-4 mr-2" />
+                Live Betting
               </Button>
+              
+              {/* Advanced Features Dropdown */}
+              <div className="relative" ref={dropdownRef}>
+                <Button
+                  variant={activeTab === 'heatmaps' || showAdvancedDropdown ? 'default' : 'ghost'}
+                  onClick={() => setShowAdvancedDropdown(!showAdvancedDropdown)}
+                  className="text-white"
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  Advanced
+                  <ChevronDown className="h-4 w-4 ml-1" />
+                </Button>
+                
+                {showAdvancedDropdown && (
+                  <div className="absolute top-full right-0 mt-1 w-48 bg-slate-800 border border-slate-600 rounded-lg shadow-lg z-50">
+                    <div className="py-1">
+                      <button
+                        onClick={() => {
+                          setActiveTab('heatmaps')
+                          setShowAdvancedDropdown(false)
+                        }}
+                        className="w-full text-left px-4 py-2 text-white hover:bg-slate-700 transition-colors flex items-center space-x-2"
+                      >
+                        <Map className="h-4 w-4" />
+                        <span>Heat Maps</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setActiveTab('calculator')
+                          setShowAdvancedDropdown(false)
+                        }}
+                        className="w-full text-left px-4 py-2 text-white hover:bg-slate-700 transition-colors flex items-center space-x-2"
+                      >
+                        <Target className="h-4 w-4" />
+                        <span>Probability Calculator</span>
+                      </button>
+                      <div className="border-t border-slate-600 my-1"></div>
+                      <button
+                        onClick={() => {
+                          window.open('/gpu-training', '_blank')
+                          setShowAdvancedDropdown(false)
+                        }}
+                        className="w-full text-left px-4 py-2 text-white hover:bg-slate-700 transition-colors flex items-center space-x-2"
+                      >
+                        <Zap className="h-4 w-4" />
+                        <span>GPU Training</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -200,102 +293,76 @@ export default function HomePage() {
 
 
         {activeTab === 'dashboard' && (
-          <div className="space-y-8">
-            {/* Stats Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <StatCard
-                title="Live Games Today"
-                value={isLoading ? "..." : liveDataStats?.totalGames || 0}
-                icon={Activity}
-                change={`${liveDataStats?.liveGames || 0} live`}
-                changeType="positive"
-                description="Across 12 major sports leagues"
-              />
-              <StatCard
-                title="Value Bets Found"
-                value={isLoading ? "..." : liveDataStats?.valueBetsFound || 0}
-                icon={Eye}
-                change="Live"
-                changeType="positive"
-                description="ML-identified opportunities"
-              />
-              <StatCard
-                title="Avg Confidence"
-                value={isLoading ? "..." : `${Math.round((liveDataStats?.avgConfidence || 0) * 100)}%`}
-                icon={Percent}
-                change="ML"
-                changeType="positive"
-                description="Ensemble model confidence"
-              />
-              <StatCard
-                title="Arbitrage Found"
-                value={isLoading ? "..." : liveDataStats?.arbitrageOpportunities || 0}
-                icon={DollarSign}
-                change="Risk-free"
-                changeType="positive"
-                description="Guaranteed profit opportunities"
-              />
-            </div>
-
-            {/* Additional Stats Row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <StatCard
-                title="Sports Active"
-                value={isLoading ? "..." : liveDataStats?.sportsActive || 0}
-                icon={Zap}
-                change="All leagues"
-                changeType="positive"
-                description="NBA, NFL, MLB, NHL, NCAA, Tennis, Soccer, WNBA, MLS, UFC, Boxing"
-              />
-              <StatCard
-                title="Predictions Made"
-                value={isLoading ? "..." : liveDataStats?.predictionsGenerated || 0}
-                icon={Trophy}
-                change="4 models"
-                changeType="positive"
-                description="ELO, Poisson, Regression, Neural"
-              />
-              <StatCard
-                title="Best Value Bet"
-                value={isLoading ? "..." : liveDataStats?.topValueBets?.[0] ? `+${liveDataStats.topValueBets[0].expectedValue.toFixed(1)}%` : 'N/A'}
-                icon={TrendingUp}
-                change="Top EV"
-                changeType="positive"
-                description="Highest expected value found"
-              />
-            </div>
-
-            {/* Main Live Sports Dashboard */}
-            <LiveSportsDashboard autoRefresh={true} />
-          </div>
+          <EnhancedDashboard />
         )}
 
         {activeTab === 'moneylines' && (
           <div className="space-y-6">
             <div className="text-center space-y-2">
-              <h2 className="text-3xl font-bold text-white">Moneyline Analysis</h2>
+              <h2 className="text-3xl font-bold text-white">Advanced Betting Markets</h2>
               <p className="text-slate-400 max-w-2xl mx-auto">
-                Advanced AI-powered moneyline predictions with edge calculation, Kelly criterion, and value ratings across all major sports
+                Professional-grade analysis across moneylines, spreads, totals, and props with sharp money tracking and line movement detection
               </p>
             </div>
-            <MoneylineDisplay />
+            <AdvancedMoneylineDisplay />
           </div>
         )}
 
         {activeTab === 'parlays' && (
-          <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-3xl font-bold text-white">Parlay Optimizer</h2>
-              <p className="text-slate-400 max-w-2xl mx-auto">
-                ML-powered parlay optimization with correlation analysis, risk management, and expected value calculations
-              </p>
+          <AdvancedParlayOptimizer />
+        )}
+
+        {activeTab === 'analytics' && (
+          <Suspense fallback={
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500"></div>
+              <p className="ml-4 text-slate-400">Loading Professional Analytics...</p>
             </div>
-            <ParlayOptimizer />
-          </div>
+          }>
+            <ProfessionalAnalytics />
+          </Suspense>
         )}
 
         {activeTab === 'calculator' && (
           <ProbabilityCalculator />
+        )}
+
+        {activeTab === 'live_betting' && (
+          <div className="space-y-6">
+            <div className="text-center space-y-2">
+              <h2 className="text-3xl font-bold text-white">Live In-Game Betting</h2>
+              <p className="text-slate-400 max-w-2xl mx-auto">
+                Real-time betting opportunities with momentum analysis and sharp money tracking
+              </p>
+            </div>
+            <Suspense fallback={
+              <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-green-500"></div>
+                <p className="ml-4 text-slate-400">Loading Live Betting Interface...</p>
+              </div>
+            }>
+              <LiveBettingInterface />
+            </Suspense>
+          </div>
+        )}
+
+        {activeTab === 'heatmaps' && (
+          <div className="space-y-6">
+            <div className="text-center space-y-2">
+              <h2 className="text-3xl font-bold text-white">Market Visualization</h2>
+              <p className="text-slate-400 max-w-2xl mx-auto">
+                Interactive heat maps showing value opportunities, volume, sharp money, and line movements across all sports
+              </p>
+            </div>
+            <Suspense fallback={
+              <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-500"></div>
+                <p className="ml-4 text-slate-400">Loading Market Visualization...</p>
+              </div>
+            }>
+              <InteractiveHeatMap />
+            </Suspense>
+          </div>
         )}
 
       </div>
