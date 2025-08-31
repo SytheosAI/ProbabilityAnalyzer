@@ -2,8 +2,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(req: NextRequest) {
+  // DISABLED - No more fake demo data
+  return NextResponse.json({
+    success: false,
+    error: 'Demo data endpoint permanently disabled',
+    message: 'Use real Sports Radar API only - no more fake games'
+  }, { status: 410 });
+  
   try {
-    // Generate realistic demo data
+    // OLD FAKE DATA BELOW - DISABLED
     const demoGames = [
       {
         id: 'demo_nba_1',

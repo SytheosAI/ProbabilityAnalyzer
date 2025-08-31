@@ -118,34 +118,36 @@ export default function HomePage() {
       if (result.success && result.data.stats.totalGames > 0) {
         setLiveDataStats(result.data.stats)
         setErrorMessage(null)
-        console.log(`✅ Loaded ${result.data.stats.totalGames} games for next 3 days`)
+        console.log(`✅ Loaded ${result.data.stats.totalGames} real games`)
       } else {
-        // Fallback to demo data
-        console.log('Live games unavailable, using demo data')
-        const demoResponse = await fetch('/api/sports/demo-data')
-        const demoResult = await demoResponse.json()
-        
-        if (demoResult.success) {
-          setLiveDataStats(demoResult.data.stats)
-          setErrorMessage('Using demo data - Live sports APIs currently unavailable')
-        } else {
-          throw new Error('Both live and demo data failed')
-        }
+        // NO FAKE DATA - Show the truth
+        console.log('No real games available for selected timeframe')
+        setLiveDataStats({
+          totalGames: 0,
+          liveGames: 0,
+          sportsActive: 0,
+          predictionsGenerated: 0,
+          avgConfidence: 0,
+          valueBetsFound: 0,
+          arbitrageOpportunities: 0,
+          topValueBets: []
+        })
+        setErrorMessage('No real games available for selected timeframe - Try expanding to 5 days or check back during regular season')
       }
     } catch (error) {
       console.error('Error fetching data:', error)
-      // Set fallback stats with realistic numbers
+      // NO FAKE DATA - Show API error
       setLiveDataStats({
-        totalGames: 24,
-        liveGames: 3,
-        sportsActive: 8,
-        predictionsGenerated: 96,
-        avgConfidence: 0.73,
-        valueBetsFound: 7,
-        arbitrageOpportunities: 2,
-        topValueBets: [{ expectedValue: 15.2 }, { expectedValue: 12.8 }, { expectedValue: 9.4 }]
+        totalGames: 0,
+        liveGames: 0,
+        sportsActive: 0,
+        predictionsGenerated: 0,
+        avgConfidence: 0,
+        valueBetsFound: 0,
+        arbitrageOpportunities: 0,
+        topValueBets: []
       })
-      setErrorMessage('Using offline mode - Refresh to try live data')
+      setErrorMessage('API connection failed - Check network connection and try again')
     } finally {
       setIsLoading(false)
     }
