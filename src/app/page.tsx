@@ -13,15 +13,14 @@ import {
   DollarSign,
   Activity,
   Eye,
-  Percent
+  Percent,
+  AlertCircle
 } from 'lucide-react'
-import SportsAnalyticsDashboard from '@/components/SportsAnalyticsDashboard'
+import LiveSportsDashboard from '@/components/LiveSportsDashboard'
 import MoneylineDisplay from '@/components/MoneylineDisplay'
 import ParlayOptimizer from '@/components/ParlayOptimizer'
 import ProbabilityCalculator from '@/components/ProbabilityCalculator'
-import LiveGamesTest from '@/components/LiveGamesTest'
 import { DashboardStats } from '@/types/sports'
-import { getAllSportsGames } from '@/services/sportsRadarApi'
 
 const StatCard = ({ 
   title, 
@@ -67,62 +66,31 @@ const StatCard = ({
 )
 
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'moneylines' | 'parlays' | 'calculator' | 'test'>('dashboard')
-  const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
-    total_games_analyzed: 0,
-    value_bets_found: 0,
-    avg_expected_value: 0,
-    avg_confidence: 0,
-    parlay_opportunities: 0,
-    arbitrage_opportunities: 0,
-    total_profit_potential: 0
-  })
-  
-  const [isLoading, setIsLoading] = useState(true)
-  const [isDemoMode, setIsDemoMode] = useState(false)
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'moneylines' | 'parlays' | 'calculator'>('dashboard')
+  const [liveDataStats, setLiveDataStats] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchRealStats()
-    // Refresh stats every 5 minutes
-    const interval = setInterval(fetchRealStats, 5 * 60 * 1000)
-    return () => clearInterval(interval)
+    fetchLiveData()
   }, [])
 
-  const fetchRealStats = async () => {
+  const fetchLiveData = async () => {
     setIsLoading(true)
     setErrorMessage(null)
     
     try {
-      // Fetch dashboard stats from API
-      const response = await fetch('/api/dashboard/stats')
+      const response = await fetch('/api/sports/live-data?analysis=true')
       const result = await response.json()
       
       if (result.success) {
-        setDashboardStats(result.data)
-        setIsDemoMode(result.isDemo || false)
-        
-        if (result.isDemo) {
-          console.log('Using demo data mode')
-        }
+        setLiveDataStats(result.data.stats)
       } else {
-        throw new Error(result.message || 'Failed to fetch stats')
+        throw new Error(result.error || 'Failed to fetch live data')
       }
     } catch (error) {
-      console.error('Error fetching real stats:', error)
-      setErrorMessage('Unable to connect to live data. Using demo mode.')
-      setIsDemoMode(true)
-      
-      // Fetch demo stats as fallback
-      try {
-        const response = await fetch('/api/dashboard/stats')
-        const result = await response.json()
-        if (result.success) {
-          setDashboardStats(result.data)
-        }
-      } catch (fallbackError) {
-        console.error('Failed to fetch demo stats:', fallbackError)
-      }
+      console.error('Error fetching live data:', error)
+      setErrorMessage('Unable to fetch live sports data. Please check your connection.')
     } finally {
       setIsLoading(false)
     }
@@ -139,17 +107,15 @@ export default function HomePage() {
                 <Target className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-white">Sports Probability Analyzer</h1>
-                <p className="text-sm text-slate-400">AI-Powered Sports Betting Intelligence</p>
+                <h1 className="text-xl font-bold text-white">Professional Sports Probability Analyzer</h1>
+                <p className="text-sm text-slate-400">Real-Time ML Analysis Across 8 Major Sports</p>
               </div>
             </div>
             
-            {/* Demo Mode Indicator */}
-            {isDemoMode && (
-              <div className="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-sm font-medium">
-                Demo Mode
-              </div>
-            )}
+            {/* Live Data Indicator */}
+            <div className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm font-medium animate-pulse">
+              LIVE DATA
+            </div>
             
             <div className="flex items-center space-x-2">
               <Button
@@ -184,14 +150,6 @@ export default function HomePage() {
                 <Target className="h-4 w-4 mr-2" />
                 Calculator
               </Button>
-              <Button
-                variant={activeTab === 'test' ? 'default' : 'ghost'}
-                onClick={() => setActiveTab('test')}
-                className="text-white"
-              >
-                <Activity className="h-4 w-4 mr-2" />
-                API Test
-              </Button>
             </div>
           </div>
         </div>
@@ -208,97 +166,75 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Demo Mode Info Banner */}
-        {isDemoMode && activeTab === 'dashboard' && (
-          <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/50 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Activity className="h-5 w-5 text-blue-400" />
-                <div>
-                  <p className="text-blue-400 font-medium">Demo Mode Active</p>
-                  <p className="text-slate-400 text-sm">Displaying sample data. Configure Supabase to see live data.</p>
-                </div>
-              </div>
-              <Button
-                onClick={fetchRealStats}
-                variant="outline"
-                size="sm"
-                className="text-blue-400 border-blue-500/50 hover:bg-blue-500/20"
-              >
-                Retry Connection
-              </Button>
-            </div>
-          </div>
-        )}
 
         {activeTab === 'dashboard' && (
           <div className="space-y-8">
             {/* Stats Overview */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <StatCard
-                title="Games Analyzed Today"
-                value={isLoading ? "..." : dashboardStats.total_games_analyzed}
+                title="Live Games Today"
+                value={isLoading ? "..." : liveDataStats?.totalGames || 0}
                 icon={Activity}
-                change="+12%"
+                change={`${liveDataStats?.liveGames || 0} live`}
                 changeType="positive"
-                description="Across all major sports leagues"
+                description="Across 8 major sports leagues"
               />
               <StatCard
                 title="Value Bets Found"
-                value={isLoading ? "..." : dashboardStats.value_bets_found}
+                value={isLoading ? "..." : liveDataStats?.valueBetsFound || 0}
                 icon={Eye}
-                change="+5"
+                change="Live"
                 changeType="positive"
-                description="High-confidence opportunities"
+                description="ML-identified opportunities"
               />
               <StatCard
-                title="Average Expected Value"
-                value={isLoading ? "..." : `${dashboardStats.avg_expected_value}%`}
+                title="Avg Confidence"
+                value={isLoading ? "..." : `${Math.round((liveDataStats?.avgConfidence || 0) * 100)}%`}
                 icon={Percent}
-                change="+2.3%"
+                change="ML"
                 changeType="positive"
-                description="Based on true probability analysis"
+                description="Ensemble model confidence"
               />
               <StatCard
-                title="Profit Potential"
-                value={isLoading ? "..." : `$${dashboardStats.total_profit_potential.toLocaleString()}`}
+                title="Arbitrage Found"
+                value={isLoading ? "..." : liveDataStats?.arbitrageOpportunities || 0}
                 icon={DollarSign}
-                change="+$486"
+                change="Risk-free"
                 changeType="positive"
-                description="Theoretical max with optimal staking"
+                description="Guaranteed profit opportunities"
               />
             </div>
 
             {/* Additional Stats Row */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <StatCard
-                title="Average Confidence"
-                value={isLoading ? "..." : `${Math.round(dashboardStats.avg_confidence * 100)}%`}
+                title="Sports Active"
+                value={isLoading ? "..." : liveDataStats?.sportsActive || 0}
                 icon={Zap}
-                change="+3.2%"
+                change="All leagues"
                 changeType="positive"
-                description="Model prediction confidence"
+                description="NBA, NFL, MLB, NHL, NCAA, Tennis, Soccer"
               />
               <StatCard
-                title="Parlay Opportunities"
-                value={isLoading ? "..." : dashboardStats.parlay_opportunities}
+                title="Predictions Made"
+                value={isLoading ? "..." : liveDataStats?.predictionsGenerated || 0}
                 icon={Trophy}
-                change="+2"
+                change="4 models"
                 changeType="positive"
-                description="Low correlation, high EV parlays"
+                description="ELO, Poisson, Regression, Neural"
               />
               <StatCard
-                title="Arbitrage Detected"
-                value={isLoading ? "..." : dashboardStats.arbitrage_opportunities}
+                title="Best Value Bet"
+                value={isLoading ? "..." : liveDataStats?.topValueBets?.[0] ? `+${liveDataStats.topValueBets[0].expectedValue.toFixed(1)}%` : 'N/A'}
                 icon={TrendingUp}
-                change="New!"
+                change="Top EV"
                 changeType="positive"
-                description="Risk-free profit opportunities"
+                description="Highest expected value found"
               />
             </div>
 
-            {/* Main Dashboard Component */}
-            <SportsAnalyticsDashboard />
+            {/* Main Live Sports Dashboard */}
+            <LiveSportsDashboard autoRefresh={true} />
           </div>
         )}
 
@@ -330,17 +266,6 @@ export default function HomePage() {
           <ProbabilityCalculator />
         )}
 
-        {activeTab === 'test' && (
-          <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-3xl font-bold text-white">Live API Test</h2>
-              <p className="text-slate-400 max-w-2xl mx-auto">
-                Testing direct Sports Radar API integration to verify live data is being fetched correctly
-              </p>
-            </div>
-            <LiveGamesTest />
-          </div>
-        )}
       </div>
 
       {/* Loading Overlay */}
@@ -357,7 +282,7 @@ export default function HomePage() {
             </div>
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-500">Fetching live games</span>
+                <span className="text-slate-500">Fetching live sports data</span>
                 <div className="flex space-x-1">
                   <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
                   <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-100"></div>
@@ -365,9 +290,15 @@ export default function HomePage() {
                 </div>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-500">Processing predictions</span>
+                <span className="text-slate-500">Running ML models</span>
                 <div className="w-32 bg-slate-700 rounded-full h-1">
                   <div className="bg-gradient-to-r from-blue-500 to-green-500 h-1 rounded-full animate-pulse" style={{width: '75%'}}></div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-500">Calculating probabilities</span>
+                <div className="w-32 bg-slate-700 rounded-full h-1">
+                  <div className="bg-gradient-to-r from-green-500 to-purple-500 h-1 rounded-full animate-pulse" style={{width: '90%'}}></div>
                 </div>
               </div>
             </div>
