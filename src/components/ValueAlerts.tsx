@@ -91,49 +91,32 @@ export default function ValueAlerts({
     audio.play().catch(e => console.log('Audio play failed:', e));
   };
   
-  // Simulate fetching new alerts (in production, this would be from API/WebSocket)
+  // Fetch REAL alerts from API
   useEffect(() => {
     if (!autoRefresh) return;
     
-    const fetchNewAlerts = () => {
-      // Mock implementation - replace with actual API call
-      const mockNewAlert: ValueAlert = {
-        id: `alert-${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        level: Math.random() > 0.7 ? 'exceptional' : Math.random() > 0.4 ? 'great' : 'good',
-        sport: 'NBA',
-        game: 'Lakers vs Warriors',
-        analysis: {
-          gameId: 'nba-123',
-          sport: 'NBA',
-          homeTeam: 'Lakers',
-          awayTeam: 'Warriors',
-          betType: 'moneyline',
-          trueProbability: 0.65,
-          impliedProbability: 0.52,
-          edge: 0.13,
-          expectedValue: 0.15,
-          expectedValuePercent: 15,
-          expectedProfit: 15,
-          currentOdds: -110,
-          valueRating: ValueRating.FIVE_STAR,
-          confidence: 0.75,
-          kellyCriterion: 0.08,
-          suggestedUnits: 5,
-          timestamp: new Date().toISOString(),
-          lastUpdated: new Date().toISOString()
-        },
-        message: `New value opportunity detected: Lakers vs Warriors - 15% EV`,
-        isNew: true,
-        dismissed: false
-      };
-      
-      // Randomly add new alert (for demo purposes)
-      if (Math.random() > 0.8) {
-        setAlerts(prev => [mockNewAlert, ...prev].slice(0, 20)); // Keep max 20 alerts
-        playAlertSound(mockNewAlert.level);
+    const fetchNewAlerts = async () => {
+      try {
+        // Fetch REAL value opportunities from API
+        const response = await fetch('/api/sports/value-alerts');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.alerts && data.alerts.length > 0) {
+            setAlerts(prev => [...data.alerts, ...prev].slice(0, 20)); // Keep max 20 alerts
+            data.alerts.forEach((alert: ValueAlert) => {
+              if (alert.isNew) {
+                playAlertSound(alert.level);
+              }
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching value alerts:', error);
       }
     };
+    
+    // Initial fetch
+    fetchNewAlerts();
     
     const interval = setInterval(fetchNewAlerts, refreshInterval);
     return () => clearInterval(interval);
