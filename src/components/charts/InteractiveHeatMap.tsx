@@ -282,57 +282,52 @@ const ValueHeatMap: React.FC<ValueHeatMapProps> = ({
 
 const MultiHeatMapDashboard: React.FC = () => {
   const [activeView, setActiveView] = useState<'ev' | 'volume' | 'sharp_money' | 'steam'>('ev')
+  const [heatMapData, setHeatMapData] = useState<{[key: string]: HeatMapData[]}>({
+    ev: [],
+    volume: [],
+    sharp_money: [],
+    steam: []
+  })
 
-  // Generate mock heat map data
-  const generateHeatMapData = (type: string): HeatMapData[] => {
-    const sports = ['NBA', 'NFL', 'MLB', 'NHL', 'NCAAF', 'NCAAB', 'Tennis', 'Soccer']
-    const markets = ['ML', 'Spread', 'Total', 'Props']
-    const data: HeatMapData[] = []
-
-    sports.forEach(sport => {
-      markets.forEach(market => {
-        let value = 0
-        let description = ''
+  // Fetch real heat map data from API
+  useEffect(() => {
+    const fetchHeatMapData = async () => {
+      try {
+        const response = await fetch('/api/sports/heatmap-data')
+        const result = await response.json()
         
-        switch (type) {
-          case 'ev':
-            value = Math.random() * 25 - 5 // -5% to 20% EV
-            description = `Expected value analysis for ${sport} ${market} bets`
-            break
-          case 'volume':
-            value = Math.random() * 100000 // 0 to 100K volume
-            description = `Betting volume for ${sport} ${market} markets`
-            break
-          case 'sharp_money':
-            value = Math.random() * 100 // 0 to 100% sharp money
-            description = `Sharp money percentage on ${sport} ${market}`
-            break
-          case 'steam':
-            value = Math.random() * 10 - 1 // -1 to 9 point moves
-            description = `Line movement in ${sport} ${market} markets`
-            break
+        if (result.success && result.data) {
+          setHeatMapData(result.data)
+        } else {
+          // If no real data available, show empty state
+          setHeatMapData({
+            ev: [],
+            volume: [],
+            sharp_money: [],
+            steam: []
+          })
         }
-
-        data.push({
-          sport,
-          market,
-          value,
-          volume: Math.random() * 50000 + 10000,
-          label: `${sport}-${market}`,
-          description,
-          trend: Math.random() > 0.5 ? 'up' : Math.random() > 0.25 ? 'down' : 'stable',
-          confidence: Math.random() * 0.4 + 0.6
+      } catch (error) {
+        console.error('Error fetching heat map data:', error)
+        setHeatMapData({
+          ev: [],
+          volume: [],
+          sharp_money: [],
+          steam: []
         })
-      })
-    })
+      }
+    }
 
-    return data
-  }
+    fetchHeatMapData()
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchHeatMapData, 30000)
+    return () => clearInterval(interval)
+  }, [])
 
-  const evData = generateHeatMapData('ev')
-  const volumeData = generateHeatMapData('volume')
-  const sharpMoneyData = generateHeatMapData('sharp_money')
-  const steamData = generateHeatMapData('steam')
+  const evData = heatMapData.ev
+  const volumeData = heatMapData.volume
+  const sharpMoneyData = heatMapData.sharp_money
+  const steamData = heatMapData.steam
 
   const handleCellClick = (data: HeatMapData) => {
     console.log('Heat map cell clicked:', data)

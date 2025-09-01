@@ -11,48 +11,27 @@ interface LiveOddsTrackerProps {
 export function LiveOddsTracker({ sport, compact = false }: LiveOddsTrackerProps) {
   const [oddsData, setOddsData] = useState<any[]>([]);
 
-  // Simulate live odds updates
+  // Fetch real live odds updates
   useEffect(() => {
-    const generateOdds = () => {
-      return [
-        {
-          id: '1',
-          game: 'Lakers vs Celtics',
-          bet: 'Lakers -3.5',
-          currentOdds: -110,
-          openingOdds: -115,
-          movement: 'down',
-          change: 5,
-          volume: '$2.3M',
-          sharpMoney: 'Lakers',
-          publicPercentage: 45
-        },
-        {
-          id: '2',
-          game: 'Chiefs vs Bills',
-          bet: 'Over 48.5',
-          currentOdds: -105,
-          openingOdds: -110,
-          movement: 'up',
-          change: 5,
-          volume: '$1.8M',
-          sharpMoney: 'Over',
-          publicPercentage: 62
+    const fetchOddsData = async () => {
+      try {
+        const response = await fetch(`/api/sports/live-odds?sport=${sport}`);
+        const result = await response.json();
+        if (result.success && result.data) {
+          setOddsData(result.data);
+        } else {
+          setOddsData([]);
         }
-      ];
+      } catch (error) {
+        console.error('Error fetching odds data:', error);
+        setOddsData([]);
+      }
     };
 
-    setOddsData(generateOdds());
+    fetchOddsData();
     
-    const interval = setInterval(() => {
-      setOddsData(prev => prev.map(odd => ({
-        ...odd,
-        currentOdds: odd.currentOdds + (Math.random() > 0.5 ? 5 : -5),
-        volume: `$${(parseFloat(odd.volume.replace('$', '').replace('M', '')) + Math.random() * 0.1).toFixed(1)}M`,
-        publicPercentage: Math.max(30, Math.min(70, odd.publicPercentage + (Math.random() > 0.5 ? 1 : -1)))
-      })));
-    }, 5000);
-
+    // Update odds every 5 seconds
+    const interval = setInterval(fetchOddsData, 5000);
     return () => clearInterval(interval);
   }, [sport]);
 

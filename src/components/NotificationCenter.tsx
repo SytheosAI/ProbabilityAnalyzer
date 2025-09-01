@@ -17,60 +17,28 @@ interface Notification {
 
 export function NotificationCenter() {
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: '1',
-      type: 'opportunity',
-      title: 'High Value Bet Alert',
-      message: 'Lakers -3.5 showing +EV opportunity based on line movement',
-      timestamp: new Date(Date.now() - 5 * 60000),
-      priority: 'urgent',
-      sport: 'NBA',
-      read: false
-    },
-    {
-      id: '2',
-      type: 'odds_change',
-      title: 'Significant Line Movement',
-      message: 'Chiefs moved from -7 to -5.5 - sharp money indicator',
-      timestamp: new Date(Date.now() - 15 * 60000),
-      priority: 'high',
-      sport: 'NFL',
-      read: false
-    },
-    {
-      id: '3',
-      type: 'game_start',
-      title: 'Game Starting Soon',
-      message: 'Yankees @ Red Sox starts in 30 minutes',
-      timestamp: new Date(Date.now() - 30 * 60000),
-      priority: 'normal',
-      sport: 'MLB',
-      read: true
-    }
-  ]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  // Simulate real-time notifications
+  // Fetch real notifications from API
   useEffect(() => {
-    const interval = setInterval(() => {
-      const random = Math.random();
-      if (random > 0.7) {
-        const newNotification: Notification = {
-          id: Date.now().toString(),
-          type: random > 0.9 ? 'opportunity' : random > 0.8 ? 'odds_change' : 'game_start',
-          title: 'New Opportunity Detected',
-          message: 'Algorithm identified profitable betting opportunity',
-          timestamp: new Date(),
-          priority: random > 0.85 ? 'urgent' : 'normal',
-          sport: ['NFL', 'NBA', 'MLB', 'NHL'][Math.floor(Math.random() * 4)],
-          read: false
-        };
-        setNotifications(prev => [newNotification, ...prev].slice(0, 20));
+    const fetchNotifications = async () => {
+      try {
+        const response = await fetch('/api/sports/notifications');
+        const result = await response.json();
+        if (result.success && result.data) {
+          setNotifications(result.data);
+        }
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
       }
-    }, 30000); // Check every 30 seconds
+    };
 
+    fetchNotifications();
+    
+    // Poll for new notifications every 30 seconds
+    const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
   }, []);
 

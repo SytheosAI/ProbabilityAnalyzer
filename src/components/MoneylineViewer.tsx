@@ -117,10 +117,9 @@ export default function MoneylineViewer() {
     const homeImplied = calculateImpliedProbability(game.homeMoneyline);
     const awayImplied = calculateImpliedProbability(game.awayMoneyline);
 
-    // Simulate ML model prediction with some variance
-    const modelVariance = (Math.random() - 0.5) * 0.2; // ±10% variance
-    const homeModelProb = Math.min(0.95, Math.max(0.05, homeImplied + modelVariance));
-    const awayModelProb = 1 - homeModelProb;
+    // Use real ML model predictions if available, otherwise use implied probability
+    const homeModelProb = game.predictions?.homeWinProb || homeImplied;
+    const awayModelProb = game.predictions?.awayWinProb || (1 - homeModelProb);
 
     // Determine predicted winner
     const predictedWinner = homeModelProb > awayModelProb ? 'home' : 'away';

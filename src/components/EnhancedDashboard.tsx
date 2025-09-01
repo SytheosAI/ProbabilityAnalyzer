@@ -190,39 +190,63 @@ const AlertsPanel = ({ alerts }: { alerts: AlertItem[] }) => (
   </Card>
 )
 
-const WeatherImpactWidget = () => (
-  <Card className="glass border-slate-700/50">
-    <CardHeader>
-      <CardTitle className="text-lg text-white flex items-center space-x-2">
-        <Cloud className="h-5 w-5 text-blue-400" />
-        <span>Weather Impact</span>
-      </CardTitle>
-    </CardHeader>
+const WeatherImpactWidget = () => {
+  const [weatherData, setWeatherData] = useState<any[]>([])
+  
+  useEffect(() => {
+    const fetchWeatherData = async () => {
+      try {
+        const response = await fetch('/api/sports/weather-impact')
+        const result = await response.json()
+        if (result.success) {
+          setWeatherData(result.data || [])
+        }
+      } catch (error) {
+        console.error('Error fetching weather data:', error)
+        setWeatherData([])
+      }
+    }
     
-    <CardContent className="space-y-3">
-      {[
-        { game: 'Bills @ Dolphins', weather: 'Rain, 15mph winds', impact: 'Under favored', severity: 'high' },
-        { game: 'Packers @ Bears', weather: 'Snow, -5°F', impact: 'Under, Running game', severity: 'high' },
-        { game: 'Cardinals @ Rams', weather: 'Dome', impact: 'No impact', severity: 'low' }
-      ].map((item, index) => (
-        <div key={index} className="bg-slate-800/50 rounded-lg p-3">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-white font-medium text-sm">{item.game}</span>
-            <span className={cn("text-xs px-2 py-1 rounded", {
-              'bg-red-500/20 text-red-400': item.severity === 'high',
-              'bg-yellow-500/20 text-yellow-400': item.severity === 'medium',
-              'bg-green-500/20 text-green-400': item.severity === 'low'
-            })}>
-              {item.severity}
-            </span>
+    fetchWeatherData()
+  }, [])
+  
+  return (
+    <Card className="glass border-slate-700/50">
+      <CardHeader>
+        <CardTitle className="text-lg text-white flex items-center space-x-2">
+          <Cloud className="h-5 w-5 text-blue-400" />
+          <span>Weather Impact</span>
+        </CardTitle>
+      </CardHeader>
+      
+      <CardContent className="space-y-3">
+        {weatherData.length === 0 ? (
+          <div className="text-center py-8">
+            <Cloud className="h-12 w-12 text-slate-400 mx-auto mb-2" />
+            <p className="text-slate-400">No weather data available</p>
           </div>
-          <p className="text-xs text-slate-400 mb-1">{item.weather}</p>
-          <p className="text-xs text-blue-400">{item.impact}</p>
-        </div>
-      ))}
-    </CardContent>
-  </Card>
-)
+        ) : (
+          weatherData.map((item, index) => (
+            <div key={index} className="bg-slate-800/50 rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-white font-medium text-sm">{item.game}</span>
+                <span className={cn("text-xs px-2 py-1 rounded", {
+                  'bg-red-500/20 text-red-400': item.severity === 'high',
+                  'bg-yellow-500/20 text-yellow-400': item.severity === 'medium',
+                  'bg-green-500/20 text-green-400': item.severity === 'low'
+                })}>
+                  {item.severity}
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mb-1">{item.weather}</p>
+              <p className="text-xs text-blue-400">{item.impact}</p>
+            </div>
+          ))
+        )}
+      </CardContent>
+    </Card>
+  )
+}
 
 // Import the Cloud icon at the top
 const Cloud = ({ className }: { className?: string }) => (
@@ -231,54 +255,82 @@ const Cloud = ({ className }: { className?: string }) => (
   </svg>
 )
 
-const InjuryReportWidget = () => (
-  <Card className="glass border-slate-700/50">
-    <CardHeader>
-      <CardTitle className="text-lg text-white flex items-center space-x-2">
-        <AlertTriangle className="h-5 w-5 text-red-400" />
-        <span>Injury Impact</span>
-      </CardTitle>
-    </CardHeader>
+const InjuryReportWidget = () => {
+  const [injuries, setInjuries] = useState<any[]>([])
+  
+  useEffect(() => {
+    const fetchInjuries = async () => {
+      try {
+        const response = await fetch('/api/sports/injuries')
+        const result = await response.json()
+        if (result.success) {
+          setInjuries(result.data || [])
+        }
+      } catch (error) {
+        console.error('Error fetching injury data:', error)
+        setInjuries([])
+      }
+    }
     
-    <CardContent className="space-y-3">
-      {[].map((item, index) => (
-        <div key={index} className="bg-slate-800/50 rounded-lg p-3">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-white font-medium text-sm">{item.player}</span>
-            <span className={cn("text-xs px-2 py-1 rounded", {
-              'bg-red-500/20 text-red-400': item.status === 'Out',
-              'bg-yellow-500/20 text-yellow-400': item.status === 'Questionable',
-              'bg-green-500/20 text-green-400': item.status === 'Probable'
-            })}>
-              {item.status}
-            </span>
+    fetchInjuries()
+  }, [])
+  
+  return (
+    <Card className="glass border-slate-700/50">
+      <CardHeader>
+        <CardTitle className="text-lg text-white flex items-center space-x-2">
+          <AlertTriangle className="h-5 w-5 text-red-400" />
+          <span>Injury Impact</span>
+        </CardTitle>
+      </CardHeader>
+      
+      <CardContent className="space-y-3">
+        {injuries.length === 0 ? (
+          <div className="text-center py-8">
+            <AlertTriangle className="h-12 w-12 text-slate-400 mx-auto mb-2" />
+            <p className="text-slate-400">No injury reports available</p>
           </div>
-          <p className="text-xs text-slate-400 mb-1">{item.team} {item.game}</p>
-          <p className="text-xs text-blue-400">{item.impact}</p>
-        </div>
-      ))}
-    </CardContent>
-  </Card>
-)
+        ) : (
+          injuries.map((item, index) => (
+            <div key={index} className="bg-slate-800/50 rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-white font-medium text-sm">{item.player}</span>
+                <span className={cn("text-xs px-2 py-1 rounded", {
+                  'bg-red-500/20 text-red-400': item.status === 'Out',
+                  'bg-yellow-500/20 text-yellow-400': item.status === 'Questionable',
+                  'bg-green-500/20 text-green-400': item.status === 'Probable'
+                })}>
+                  {item.status}
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mb-1">{item.team} {item.game}</p>
+              <p className="text-xs text-blue-400">{item.impact}</p>
+            </div>
+          ))
+        )}
+      </CardContent>
+    </Card>
+  )
+}
 
 export default function EnhancedDashboard() {
   const [stats, setStats] = useState<DashboardStats>({
-    totalGames: 47,
-    liveGames: 8,
-    sportsActive: 12,
-    valueBetsFound: 23,
-    avgConfidence: 0.847,
-    arbitrageOpportunities: 4,
-    totalBankroll: 10000,
-    dailyPnL: 347.50,
-    weeklyROI: 12.4,
-    sharpeRatio: 2.17,
-    winRate: 64.2,
-    avgOdds: -108,
-    closingLineValue: 8.3,
-    steamMoves: 7,
-    contrarian: 12,
-    publicFades: 18
+    totalGames: 0,
+    liveGames: 0,
+    sportsActive: 0,
+    valueBetsFound: 0,
+    avgConfidence: 0,
+    arbitrageOpportunities: 0,
+    totalBankroll: 0,
+    dailyPnL: 0,
+    weeklyROI: 0,
+    sharpeRatio: 0,
+    winRate: 0,
+    avgOdds: 0,
+    closingLineValue: 0,
+    steamMoves: 0,
+    contrarian: 0,
+    publicFades: 0
   })
 
   const [alerts, setAlerts] = useState<AlertItem[]>([])
@@ -287,17 +339,44 @@ export default function EnhancedDashboard() {
   const [isAutoRefresh, setIsAutoRefresh] = useState(true)
   const [lastUpdate, setLastUpdate] = useState(new Date())
 
+  // Fetch real data from API
+  const fetchStats = async () => {
+    try {
+      const response = await fetch('/api/sports/live-games?days=3')
+      const result = await response.json()
+      
+      if (result.success && result.data.stats) {
+        setStats({
+          totalGames: result.data.stats.totalGames || 0,
+          liveGames: result.data.stats.liveGames || 0,
+          sportsActive: result.data.stats.sportsActive || 0,
+          valueBetsFound: result.data.stats.valueBetsFound || 0,
+          avgConfidence: result.data.stats.avgConfidence || 0,
+          arbitrageOpportunities: result.data.stats.arbitrageOpportunities || 0,
+          totalBankroll: 10000, // This could come from user settings
+          dailyPnL: result.data.stats.dailyPnL || 0,
+          weeklyROI: result.data.stats.weeklyROI || 0,
+          sharpeRatio: result.data.stats.sharpeRatio || 0,
+          winRate: result.data.stats.winRate || 0,
+          avgOdds: result.data.stats.avgOdds || 0,
+          closingLineValue: result.data.stats.closingLineValue || 0,
+          steamMoves: result.data.stats.steamMoves || 0,
+          contrarian: result.data.stats.contrarian || 0,
+          publicFades: result.data.stats.publicFades || 0
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error)
+    }
+  }
+
   useEffect(() => {
+    fetchStats() // Initial fetch
+    
     if (isAutoRefresh) {
       const interval = setInterval(() => {
         setLastUpdate(new Date())
-        // Simulate data updates
-        setStats(prev => ({
-          ...prev,
-          dailyPnL: prev.dailyPnL + (Math.random() - 0.5) * 20,
-          valueBetsFound: prev.valueBetsFound + Math.floor(Math.random() * 3),
-          liveGames: Math.max(0, prev.liveGames + Math.floor(Math.random() * 3) - 1)
-        }))
+        fetchStats() // Fetch real data instead of simulating
       }, 30000) // Update every 30 seconds
 
       return () => clearInterval(interval)
@@ -306,7 +385,7 @@ export default function EnhancedDashboard() {
 
   const handleRefresh = () => {
     setLastUpdate(new Date())
-    // Trigger data refresh
+    fetchStats() // Fetch real data
   }
 
   return (
@@ -475,25 +554,10 @@ export default function EnhancedDashboard() {
             </CardHeader>
             
             <CardContent className="space-y-3">
-              {[].map((item, index) => (
-                <div key={index} className={cn(
-                  "bg-slate-800/50 rounded-lg p-3 border-l-4",
-                  item.best ? "border-green-500" : "border-transparent"
-                )}>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-white font-medium">{item.book}</p>
-                      <p className="text-xs text-slate-400">{item.game}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-white">{item.line}</p>
-                      <p className={cn("text-xs", item.best ? "text-green-400" : "text-slate-400")}>
-                        {item.odds}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
+              <div className="text-center py-8">
+                <BarChart3 className="h-12 w-12 text-slate-400 mx-auto mb-2" />
+                <p className="text-slate-400">Line shopping data will appear when live games are available</p>
+              </div>
             </CardContent>
           </Card>
 

@@ -192,7 +192,7 @@ export function MoneylineBrowser({ sport, onSelectBet }: MoneylineBrowserProps) 
                     type: 'Moneyline',
                     selection: team === 'away' ? game?.away : game?.home,
                     odds: team === 'away' ? game?.awayOdds : game?.homeOdds,
-                    confidence: 55 + Math.random() * 15
+                    confidence: game?.predictions?.confidence || 65
                   };
                 });
                 onSelectBet(selectedBets);

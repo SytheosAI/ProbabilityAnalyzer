@@ -493,73 +493,129 @@ export default function AdvancedMoneylineDisplay() {
     generateAdvancedPredictions()
   }, [filters.days, filters.sport])
 
-  const generateAdvancedPredictions = () => {
+  const generateAdvancedPredictions = async () => {
     setLoading(true)
     
-    // Simulate advanced prediction generation
-    setTimeout(() => {
-      const mockPredictions: AdvancedMoneylinePrediction[] = [
-        {
-          game_id: 'game-1',
-          sport: 'nba',
-          team: 'Lakers',
-          american_odds: -140,
-          decimal_odds: 1.71,
-          implied_probability: 0.583,
-          true_probability: 0.687,
-          confidence_score: 0.847,
-          expected_value: 17.8,
-          edge: 0.178,
-          kelly_criterion: 0.045,
-          value_rating: 'excellent' as const,
-          key_factors: {
-            recent_form: 'Strong',
-            head_to_head: 'Favorable',
-            injury_impact: 'Minimal',
-            weather: 'Dome',
-            public_betting: '73% on Lakers'
-          },
-          markets: {
-            spread: { line: -4.5, odds: -110, probability: 0.65 },
-            total: { line: 225.5, overOdds: -108, underOdds: -112, overProb: 0.52, underProb: 0.48 },
-            props: [
-              { type: 'LeBron Points', line: 27.5, odds: -115, probability: 0.54 },
-              { type: 'AD Rebounds', line: 11.5, odds: +105, probability: 0.47 },
-              { type: 'Lakers 3PT Made', line: 12.5, odds: -120, probability: 0.55 }
-            ]
-          },
-          sharpMoney: { percentage: 67, direction: 'home', volume: 125000 },
-          publicBetting: { percentage: 73, direction: 'home', tickets: 8750 },
-          lineMovement: { opening: -125, current: -140, direction: 'down', steamMove: true },
-          closingLineValue: 8.7,
-          modelAgreement: 0.89,
-          historicalPerformance: { winRate: 0.642, avgOdds: -132, roi: 14.3 }
-        }
-        // Add more mock predictions...
-      ]
+    try {
+      // Fetch real data from API
+      const response = await fetch(`/api/sports/live-games?days=${filters.days}&sport=${filters.sport === 'all' ? '' : filters.sport}`)
+      const result = await response.json()
       
-      const mockGames: LiveGame[] = [
-        {
-          id: 'game-1',
-          sport: 'NBA',
-          league: 'NBA',
-          homeTeam: 'Lakers',
-          awayTeam: 'Warriors',
-          scheduled: new Date().toISOString(),
-          venue: 'Crypto.com Arena',
-          odds: { homeML: -140, awayML: +115, spread: -4.5, total: 225.5 },
-          predictions: {
-            homeWinProb: 0.687,
-            confidence: 0.847,
-            expectedValue: 17.8
+      if (result.success && result.data.games && result.data.games.length > 0) {
+        // Convert the API data to our format
+        const apiGames = result.data.games
+        const gamePredictions: AdvancedMoneylinePrediction[] = []
+        
+        apiGames.forEach((game: any) => {
+          if (game.predictions && game.odds) {
+            // Create predictions for both teams if they exist
+            if (game.predictions.homeWinProb && game.odds.homeML) {
+              gamePredictions.push({
+                game_id: game.id,
+                sport: game.sport?.toLowerCase() || 'unknown',
+                team: game.homeTeam,
+                american_odds: game.odds.homeML,
+                decimal_odds: game.odds.homeML > 0 ? (game.odds.homeML / 100) + 1 : (-100 / game.odds.homeML) + 1,
+                implied_probability: game.odds.homeML > 0 ? 100 / (game.odds.homeML + 100) : (-game.odds.homeML) / (-game.odds.homeML + 100),
+                true_probability: game.predictions.homeWinProb,
+                confidence_score: game.predictions.confidence || 0.5,
+                expected_value: game.predictions.expectedValue || 0,
+                edge: Math.max(0, game.predictions.homeWinProb - (game.odds.homeML > 0 ? 100 / (game.odds.homeML + 100) : (-game.odds.homeML) / (-game.odds.homeML + 100))),
+                kelly_criterion: 0.02,
+                value_rating: game.predictions.expectedValue > 15 ? 'excellent' : game.predictions.expectedValue > 8 ? 'good' : 'moderate',
+                key_factors: {
+                  recent_form: 'Analyzing...',
+                  head_to_head: 'Analyzing...',
+                  injury_impact: 'Analyzing...',
+                  weather: game.venue?.includes('Dome') ? 'Dome' : 'Outdoor',
+                  public_betting: 'Data loading...'
+                },
+                markets: {
+                  spread: { 
+                    line: game.odds.spread || 0, 
+                    odds: -110, 
+                    probability: game.predictions.homeWinProb 
+                  },
+                  total: { 
+                    line: game.odds.total || 0, 
+                    overOdds: -108, 
+                    underOdds: -112, 
+                    overProb: 0.52, 
+                    underProb: 0.48 
+                  },
+                  props: []
+                },
+                sharpMoney: { percentage: 50, direction: 'home', volume: 0 },
+                publicBetting: { percentage: 50, direction: 'home', tickets: 0 },
+                lineMovement: { opening: game.odds.homeML, current: game.odds.homeML, direction: 'stable', steamMove: false },
+                closingLineValue: 0,
+                modelAgreement: game.predictions.confidence || 0.5,
+                historicalPerformance: { winRate: 0.5, avgOdds: game.odds.homeML, roi: 0 }
+              })
+            }
+            
+            if (game.predictions.awayWinProb && game.odds.awayML) {
+              gamePredictions.push({
+                game_id: game.id + '_away',
+                sport: game.sport?.toLowerCase() || 'unknown',
+                team: game.awayTeam,
+                american_odds: game.odds.awayML,
+                decimal_odds: game.odds.awayML > 0 ? (game.odds.awayML / 100) + 1 : (-100 / game.odds.awayML) + 1,
+                implied_probability: game.odds.awayML > 0 ? 100 / (game.odds.awayML + 100) : (-game.odds.awayML) / (-game.odds.awayML + 100),
+                true_probability: 1 - game.predictions.homeWinProb,
+                confidence_score: game.predictions.confidence || 0.5,
+                expected_value: game.predictions.expectedValue || 0,
+                edge: Math.max(0, (1 - game.predictions.homeWinProb) - (game.odds.awayML > 0 ? 100 / (game.odds.awayML + 100) : (-game.odds.awayML) / (-game.odds.awayML + 100))),
+                kelly_criterion: 0.02,
+                value_rating: game.predictions.expectedValue > 15 ? 'excellent' : game.predictions.expectedValue > 8 ? 'good' : 'moderate',
+                key_factors: {
+                  recent_form: 'Analyzing...',
+                  head_to_head: 'Analyzing...',
+                  injury_impact: 'Analyzing...',
+                  weather: game.venue?.includes('Dome') ? 'Dome' : 'Outdoor',
+                  public_betting: 'Data loading...'
+                },
+                markets: {
+                  spread: { 
+                    line: -(game.odds.spread || 0), 
+                    odds: -110, 
+                    probability: 1 - game.predictions.homeWinProb 
+                  },
+                  total: { 
+                    line: game.odds.total || 0, 
+                    overOdds: -108, 
+                    underOdds: -112, 
+                    overProb: 0.52, 
+                    underProb: 0.48 
+                  },
+                  props: []
+                },
+                sharpMoney: { percentage: 50, direction: 'away', volume: 0 },
+                publicBetting: { percentage: 50, direction: 'away', tickets: 0 },
+                lineMovement: { opening: game.odds.awayML, current: game.odds.awayML, direction: 'stable', steamMove: false },
+                closingLineValue: 0,
+                modelAgreement: game.predictions.confidence || 0.5,
+                historicalPerformance: { winRate: 0.5, avgOdds: game.odds.awayML, roi: 0 }
+              })
+            }
           }
-        }
-      ]
-      
-      setPredictions(mockPredictions)
-      setGames(mockGames)
+        })
+        
+        setPredictions(gamePredictions)
+        setGames(apiGames)
+      } else {
+        // No games available
+        setPredictions([])
+        setGames([])
+        console.log('No games available from API')
+      }
+    } catch (error) {
+      console.error('Error fetching advanced predictions:', error)
+      setPredictions([])
+      setGames([])
+    } finally {
       setLoading(false)
-    }, 1000)
+    }
   }
 
   const toggleCardExpansion = (gameId: string) => {

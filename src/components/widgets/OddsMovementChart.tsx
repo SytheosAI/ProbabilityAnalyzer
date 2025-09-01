@@ -31,46 +31,33 @@ const OddsMovementChart: React.FC<OddsMovementChartProps> = ({
   const [timeframe, setTimeframe] = useState<'1h' | '6h' | '24h' | '7d'>('6h')
 
   useEffect(() => {
-    // Generate demo odds movement data with realistic patterns
-    const generateMovements = () => {
-      const now = new Date()
-      const movements: OddsMovement[] = []
-      
-      // Generate movements based on timeframe
-      const intervals = timeframe === '1h' ? 12 : timeframe === '6h' ? 36 : timeframe === '24h' ? 48 : 168
-      const timeStep = timeframe === '1h' ? 5 : timeframe === '6h' ? 10 : timeframe === '24h' ? 30 : 60
-      
-      let homeOdds = -110 + Math.random() * 40 - 20
-      let awayOdds = -110 + Math.random() * 40 - 20
-      
-      for (let i = intervals; i >= 0; i--) {
-        const timestamp = new Date(now.getTime() - (i * timeStep * 60 * 1000))
-        
-        // Add realistic odds movement
-        homeOdds += (Math.random() - 0.5) * 10
-        awayOdds += (Math.random() - 0.5) * 10
-        
-        // Ensure odds stay within reasonable bounds
-        homeOdds = Math.max(-300, Math.min(+200, homeOdds))
-        awayOdds = Math.max(-300, Math.min(+200, awayOdds))
-        
-        movements.push({
-          timestamp: timestamp.toISOString(),
-          homeOdds: Math.round(homeOdds),
-          awayOdds: Math.round(awayOdds),
-          volume: Math.random() * 100000,
-          sharpMoney: Math.random() * 50000
-        })
+    // Fetch real odds movement data from API
+    const fetchOddsMovement = async () => {
+      if (!gameId) {
+        setMovements([])
+        setLoading(false)
+        return
       }
-      
-      return movements
+
+      setLoading(true)
+      try {
+        const response = await fetch(`/api/sports/odds-movement/${gameId}?timeframe=${timeframe}`)
+        const result = await response.json()
+        
+        if (result.success && result.data) {
+          setMovements(result.data)
+        } else {
+          setMovements([])
+        }
+      } catch (error) {
+        console.error('Error fetching odds movement:', error)
+        setMovements([])
+      } finally {
+        setLoading(false)
+      }
     }
 
-    setLoading(true)
-    setTimeout(() => {
-      setMovements(generateMovements())
-      setLoading(false)
-    }, 500)
+    fetchOddsMovement()
   }, [timeframe, gameId])
 
   const latestMovement = movements[movements.length - 1]
