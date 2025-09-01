@@ -90,7 +90,10 @@ export default function HomePage() {
   const dropdownRef = React.useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    fetchLiveData()
+    // Add delay to ensure client is ready
+    setTimeout(() => {
+      fetchLiveData()
+    }, 100)
   }, [selectedDays])
 
   // Handle click outside dropdown
@@ -340,6 +343,12 @@ export default function HomePage() {
             <div className="flex items-center space-x-2">
               <AlertCircle className="h-5 w-5 text-yellow-400" />
               <p className="text-yellow-400">{errorMessage}</p>
+              <button 
+                onClick={() => fetchLiveData()} 
+                className="ml-4 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Retry
+              </button>
             </div>
           </div>
         )}
