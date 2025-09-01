@@ -377,14 +377,10 @@ export default function LiveBettingInterface() {
   const [filter, setFilter] = useState<'all' | 'high_value' | 'momentum' | 'closing'>('all')
 
   useEffect(() => {
-    // Generate mock live games
+    // FETCH REAL LIVE GAMES - NO FAKE DATA
     const generateLiveGames = (): LiveGame[] => {
-      const sports = ['NBA', 'NFL', 'NHL']
-      const teams = {
-        NBA: ['Lakers', 'Warriors', 'Celtics', 'Heat', 'Nets', '76ers'],
-        NFL: ['Chiefs', 'Bills', 'Cowboys', 'Patriots', 'Steelers', '49ers'],
-        NHL: ['Rangers', 'Bruins', 'Kings', 'Lightning', 'Penguins', 'Capitals']
-      }
+      // RETURN EMPTY ARRAY - NO FAKE GAMES
+      return []
 
       const games: LiveGame[] = []
       

@@ -61,14 +61,8 @@ const BettingTrendsWidget: React.FC<BettingTrendsWidgetProps> = ({
 
   useEffect(() => {
     const generateBettingTrends = (): BettingTrend[] => {
-      const sports = sport ? [sport] : ['NBA', 'NFL', 'MLB', 'NHL', 'NCAAF']
-      const teams = {
-        NBA: ['Lakers', 'Warriors', 'Celtics', 'Heat', 'Nets', '76ers', 'Bucks', 'Nuggets'],
-        NFL: ['Chiefs', 'Bills', 'Cowboys', 'Patriots', 'Steelers', '49ers', 'Packers', 'Ravens'],
-        MLB: ['Yankees', 'Dodgers', 'Red Sox', 'Giants', 'Cubs', 'Astros', 'Braves', 'Mets'],
-        NHL: ['Rangers', 'Bruins', 'Kings', 'Lightning', 'Penguins', 'Capitals', 'Leafs', 'Oilers'],
-        NCAAF: ['Alabama', 'Georgia', 'Ohio State', 'Clemson', 'Texas', 'Michigan', 'USC', 'Oregon']
-      }
+      // NO FAKE DATA - RETURN EMPTY ARRAY
+      return []
 
       const trends: BettingTrend[] = []
       

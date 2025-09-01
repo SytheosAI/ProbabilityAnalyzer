@@ -73,58 +73,11 @@ const LiveScoreWidget: React.FC<LiveScoreWidgetProps> = ({
         NCAAB: ['1st', '2nd', 'OT']
       }
 
+      // STOP GENERATING FAKE GAMES - RETURN EMPTY ARRAY
       const scores: LiveScore[] = []
       
-      for (let i = 0; i < maxGames; i++) {
-        const selectedSport = sports[Math.floor(Math.random() * sports.length)] as keyof typeof teams
-        const sportTeams = teams[selectedSport]
-        const homeTeam = sportTeams[Math.floor(Math.random() * sportTeams.length)]
-        let awayTeam = sportTeams[Math.floor(Math.random() * sportTeams.length)]
-        while (awayTeam === homeTeam) {
-          awayTeam = sportTeams[Math.floor(Math.random() * sportTeams.length)]
-        }
-
-        const status = gameStatuses[Math.floor(Math.random() * gameStatuses.length)] as LiveScore['status']
-        const homeScore = status === 'scheduled' ? 0 : Math.floor(Math.random() * 120)
-        const awayScore = status === 'scheduled' ? 0 : Math.floor(Math.random() * 120)
-        const momentum = (Math.random() - 0.5) * 200 // -100 to 100
-        
-        const sportPeriods = periods[selectedSport]
-        const period = status === 'scheduled' ? 'Scheduled' : 
-                     status === 'completed' ? 'Final' :
-                     sportPeriods[Math.floor(Math.random() * sportPeriods.length)]
-
-        const timeOptions = ['12:35', '8:47', '2:15', '0:33', '15:22', 'Halftime', 'End of 1st']
-        const timeRemaining = status === 'scheduled' ? 'TBD' :
-                            status === 'completed' ? 'Final' :
-                            timeOptions[Math.floor(Math.random() * timeOptions.length)]
-
-        scores.push({
-          gameId: `game-${i}`,
-          sport: selectedSport,
-          homeTeam,
-          awayTeam,
-          homeScore,
-          awayScore,
-          period,
-          timeRemaining,
-          status,
-          possession: Math.random() > 0.5 ? 'home' : 'away',
-          momentum,
-          lastPlay: status === 'live' ? 'Johnson 3-pt FG' : undefined,
-          inGameOdds: status === 'live' ? {
-            homeML: -110 + Math.random() * 40 - 20,
-            awayML: -110 + Math.random() * 40 - 20,
-            spread: (Math.random() - 0.5) * 14,
-            total: 200 + Math.random() * 50
-          } : undefined
-        })
-      }
-
-      return scores.sort((a, b) => {
-        const statusOrder = { live: 0, completed: 1, scheduled: 2 }
-        return statusOrder[a.status] - statusOrder[b.status]
-      })
+      // DO NOT GENERATE ANY FAKE DATA
+      return scores
     }
 
     setLoading(true)
