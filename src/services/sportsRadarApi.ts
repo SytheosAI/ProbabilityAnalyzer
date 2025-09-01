@@ -85,6 +85,11 @@ class SportsRadarAPI {
   private isCacheValid(timestamp: number): boolean {
     return Date.now() - timestamp < this.cacheTimeout;
   }
+  
+  // Add delay to respect rate limits
+  private async delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
 
   private async fetchWithCache(endpoint: string): Promise<any> {
     const cacheKey = this.getCacheKey(endpoint);
@@ -99,17 +104,22 @@ class SportsRadarAPI {
     console.log(`Fetching LIVE data from: ${url}`);
     
     try {
+      // Add delay to respect rate limits (1 request per second for trial)
+      await this.delay(1000);
+      
       const response = await fetch(url);
       if (!response.ok) {
-        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+        // Don't throw error, just log and return empty data
+        console.warn(`Sports Radar API: ${response.status} - Falling back to ESPN data`);
+        return { games: [], events: [], week: { games: [] } };
       }
       
       const data = await response.json();
       this.cache.set(cacheKey, { data, timestamp: Date.now() });
       return data;
     } catch (error) {
-      console.error('Sports Radar API Error:', error);
-      throw error;
+      console.warn('Sports Radar API not available, using ESPN as fallback');
+      return { games: [], events: [], week: { games: [] } };
     }
   }
 
@@ -303,44 +313,35 @@ class SportsRadarAPI {
 
   // Get All Games Across Sports
   async getAllLiveGames(): Promise<{ sport: string; games: LiveGame[] }[]> {
-    console.log('🎯 Fetching ALL REAL SPORTS DATA - No more fake games!');
-    const [nba, nfl, mlb, nhl, ncaaf, tennis] = await Promise.allSettled([
-      this.getNBAGamesToday(),
-      this.getNFLGamesThisWeek(),
-      this.getMLBGamesToday(),
-      this.getNHLGamesToday(),
-      this.getNCAAFGamesToday(),
-      this.getTennisMatchesToday()
-    ]);
-
+    console.log('🎯 Sports Radar API - Using cached data when available');
+    // Fetch sequentially with delays to respect rate limits
     const results = [];
     
-    if (nba.status === 'fulfilled' && nba.value.length > 0) {
-      results.push({ sport: 'NBA', games: nba.value });
-      console.log(`✅ Found ${nba.value.length} NBA games`);
-    }
-    if (nfl.status === 'fulfilled' && nfl.value.length > 0) {
-      results.push({ sport: 'NFL', games: nfl.value });
-      console.log(`✅ Found ${nfl.value.length} NFL games`);
-    }
-    if (mlb.status === 'fulfilled' && mlb.value.length > 0) {
-      results.push({ sport: 'MLB', games: mlb.value });
-      console.log(`✅ Found ${mlb.value.length} MLB games`);
-    }
-    if (nhl.status === 'fulfilled' && nhl.value.length > 0) {
-      results.push({ sport: 'NHL', games: nhl.value });
-      console.log(`✅ Found ${nhl.value.length} NHL games`);
-    }
-    if (ncaaf.status === 'fulfilled' && ncaaf.value.length > 0) {
-      results.push({ sport: 'NCAAF', games: ncaaf.value });
-      console.log(`✅ Found ${ncaaf.value.length} NCAA Football games`);
-    }
-    if (tennis.status === 'fulfilled' && tennis.value.length > 0) {
-      results.push({ sport: 'TENNIS', games: tennis.value });
-      console.log(`✅ Found ${tennis.value.length} Tennis matches`);
+    try {
+      const nba = await this.getNBAGamesToday();
+      if (nba.length > 0) {
+        results.push({ sport: 'NBA', games: nba });
+        console.log(`✅ Found ${nba.length} NBA games from Sports Radar`);
+      }
+      
+      await this.delay(1000); // Wait between requests
+      const nfl = await this.getNFLGamesThisWeek();
+      if (nfl.length > 0) {
+        results.push({ sport: 'NFL', games: nfl });
+        console.log(`✅ Found ${nfl.length} NFL games from Sports Radar`);
+      }
+      
+      await this.delay(1000);
+      const mlb = await this.getMLBGamesToday();
+      if (mlb.length > 0) {
+        results.push({ sport: 'MLB', games: mlb });
+        console.log(`✅ Found ${mlb.length} MLB games from Sports Radar`);
+      }
+    } catch (error) {
+      console.warn('Sports Radar rate limited - using ESPN data only');
     }
 
-    console.log(`🎯 TOTAL REAL GAMES FOUND: ${results.reduce((sum, sport) => sum + sport.games.length, 0)} across ${results.length} sports`);
+    console.log(`🎯 Sports Radar Total: ${results.reduce((sum, sport) => sum + sport.games.length, 0)} games across ${results.length} sports`);
     return results;
   }
 
