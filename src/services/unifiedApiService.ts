@@ -86,7 +86,13 @@ export class UnifiedApiService {
       { sport: 'football', league: 'nfl' },
       { sport: 'basketball', league: 'nba' },
       { sport: 'baseball', league: 'mlb' },
-      { sport: 'hockey', league: 'nhl' }
+      { sport: 'hockey', league: 'nhl' },
+      { sport: 'football', league: 'college-football' },
+      { sport: 'basketball', league: 'mens-college-basketball' },
+      { sport: 'mma', league: 'ufc' },
+      { sport: 'tennis', league: 'tennis' },
+      { sport: 'soccer', league: 'usa.1' }, // MLS
+      { sport: 'golf', league: 'pga' }
     ];
     
     const allGames: UnifiedGame[] = [];
