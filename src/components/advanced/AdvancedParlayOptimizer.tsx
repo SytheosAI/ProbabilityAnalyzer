@@ -485,24 +485,6 @@ export default function AdvancedParlayOptimizer() {
   useEffect(() => {
     // LIVE DATA ONLY - NO HARDCODED BETS
     const mockBets: ParlayLeg[] = [];
-        market: 'total',
-        selection: 'Over 225.5',
-        odds: -108,
-        probability: 0.519,
-        confidence: 0.693
-      },
-      {
-        id: 'bet-4',
-        sport: 'MLB',
-        game: 'Yankees vs Red Sox',
-        team: 'Yankees',
-        market: 'ml',
-        selection: 'Yankees ML',
-        odds: +115,
-        probability: 0.465,
-        confidence: 0.724
-      }
-    ]
     setAvailableBets(mockBets)
   }, [])
 
