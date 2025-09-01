@@ -5,13 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { 
   Clock, 
   Play, 
-  Pause, 
-  Zap, 
-  Target, 
-  TrendingUp, 
-  TrendingDown,
   Activity,
-  AlertCircle
+  AlertCircle,
+  TrendingUp,
+  TrendingDown,
+  Target
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -26,7 +24,7 @@ interface LiveScore {
   timeRemaining: string
   status: 'live' | 'completed' | 'scheduled'
   possession?: 'home' | 'away'
-  momentum: number // -100 to 100
+  momentum: number
   lastPlay?: string
   inGameOdds?: {
     homeML: number
@@ -49,59 +47,87 @@ const LiveScoreWidget: React.FC<LiveScoreWidgetProps> = ({
 }) => {
   const [scores, setScores] = useState<LiveScore[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const generateLiveScores = (): LiveScore[] => {
-      const sports = sport ? [sport] : ['NBA', 'NFL', 'MLB', 'NHL', 'NCAAF', 'NCAAB']
-      // LIVE DATA ONLY - NO HARDCODED TEAMS
-      const teams = {
-        NBA: [],
-        NFL: [],
-        MLB: [],
-        NHL: [],
-        NCAAF: [],
-        NCAAB: []
-      }
-
-      const gameStatuses = ['live', 'live', 'live', 'completed', 'scheduled']
-      const periods = {
-        NBA: ['1st', '2nd', '3rd', '4th', 'OT'],
-        NFL: ['1st', '2nd', '3rd', '4th', 'OT'],
-        MLB: ['T1st', 'B1st', 'T2nd', 'B2nd', 'T9th', 'B9th'],
-        NHL: ['1st', '2nd', '3rd', 'OT', 'SO'],
-        NCAAF: ['1st', '2nd', '3rd', '4th'],
-        NCAAB: ['1st', '2nd', 'OT']
-      }
-
-      // STOP GENERATING FAKE GAMES - RETURN EMPTY ARRAY
-      const scores: LiveScore[] = []
+    const fetchRealScores = async () => {
+      setLoading(true)
+      setError(null)
       
-      // DO NOT GENERATE ANY FAKE DATA
-      return scores
+      try {
+        // Fetch REAL scores from ESPN API
+        const sportEndpoint = sport?.toLowerCase() || 'football/nfl'
+        const response = await fetch(`https://site.api.espn.com/apis/site/v2/sports/${sportEndpoint}/scoreboard`)
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch scores')
+        }
+        
+        const data = await response.json()
+        
+        // Transform ESPN data to our format
+        const transformedScores: LiveScore[] = data.events?.slice(0, maxGames).map((game: any) => {
+          const competition = game.competitions[0]
+          const homeTeam = competition.competitors.find((c: any) => c.homeAway === 'home')
+          const awayTeam = competition.competitors.find((c: any) => c.homeAway === 'away')
+          
+          let status: 'live' | 'completed' | 'scheduled' = 'scheduled'
+          if (competition.status.type.completed) {
+            status = 'completed'
+          } else if (competition.status.type.state === 'in') {
+            status = 'live'
+          }
+          
+          // Calculate momentum based on recent scoring
+          let momentum = 0
+          if (status === 'live' && competition.situation) {
+            const situation = competition.situation
+            if (situation.lastPlay?.team?.id === homeTeam.id) {
+              momentum = 50
+            } else if (situation.lastPlay?.team?.id === awayTeam.id) {
+              momentum = -50
+            }
+          }
+          
+          return {
+            gameId: game.id,
+            sport: sport || 'NFL',
+            homeTeam: homeTeam.team.displayName,
+            awayTeam: awayTeam.team.displayName,
+            homeScore: parseInt(homeTeam.score) || 0,
+            awayScore: parseInt(awayTeam.score) || 0,
+            period: competition.status.period || '1st',
+            timeRemaining: competition.status.displayClock || competition.status.type.shortDetail || 'TBD',
+            status,
+            possession: competition.situation?.possession?.id === homeTeam.id ? 'home' : 
+                       competition.situation?.possession?.id === awayTeam.id ? 'away' : undefined,
+            momentum,
+            lastPlay: competition.situation?.lastPlay?.text,
+            inGameOdds: status === 'live' && competition.odds ? {
+              homeML: competition.odds[0]?.homeTeamOdds?.moneyLine || 0,
+              awayML: competition.odds[0]?.awayTeamOdds?.moneyLine || 0,
+              spread: parseFloat(competition.odds[0]?.spread) || 0,
+              total: parseFloat(competition.odds[0]?.overUnder) || 0
+            } : undefined
+          }
+        }) || []
+        
+        setScores(transformedScores)
+      } catch (err) {
+        console.error('Error fetching scores:', err)
+        setError('Unable to fetch live scores')
+        setScores([])
+      } finally {
+        setLoading(false)
+      }
     }
 
-    setLoading(true)
-    setTimeout(() => {
-      setScores(generateLiveScores())
-      setLoading(false)
-    }, 500)
-
-    // Update live scores every 30 seconds
-    const interval = setInterval(() => {
-      setScores(prev => prev.map(score => {
-        if (score.status === 'live') {
-          // Randomly update scores
-          return {
-            ...score,
-            homeScore: score.homeScore + (Math.random() > 0.95 ? Math.floor(Math.random() * 3) + 1 : 0),
-            awayScore: score.awayScore + (Math.random() > 0.95 ? Math.floor(Math.random() * 3) + 1 : 0),
-            momentum: Math.max(-100, Math.min(100, score.momentum + (Math.random() - 0.5) * 40))
-          }
-        }
-        return score
-      }))
-    }, 30000)
-
+    // Initial fetch
+    fetchRealScores()
+    
+    // Refresh every 30 seconds for live games
+    const interval = setInterval(fetchRealScores, 30000)
+    
     return () => clearInterval(interval)
   }, [maxGames, sport])
 
@@ -116,7 +142,7 @@ const LiveScoreWidget: React.FC<LiveScoreWidgetProps> = ({
   const getStatusIcon = (status: LiveScore['status']) => {
     switch (status) {
       case 'live': return <Activity className="h-3 w-3" />
-      case 'completed': return <Pause className="h-3 w-3" />
+      case 'completed': return <Clock className="h-3 w-3" />
       case 'scheduled': return <Clock className="h-3 w-3" />
     }
   }
@@ -142,10 +168,10 @@ const LiveScoreWidget: React.FC<LiveScoreWidgetProps> = ({
       <CardHeader>
         <CardTitle className="text-lg text-white flex items-center space-x-2">
           <Play className="h-5 w-5 text-green-400" />
-          <span>Live Scores</span>
+          <span>Live Scores - REAL DATA</span>
         </CardTitle>
         <CardDescription className="text-slate-400">
-          Real-time scores with in-game momentum
+          Live scores from ESPN API
         </CardDescription>
       </CardHeader>
       
@@ -153,6 +179,11 @@ const LiveScoreWidget: React.FC<LiveScoreWidgetProps> = ({
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          </div>
+        ) : error ? (
+          <div className="text-center py-8">
+            <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-2" />
+            <p className="text-red-400">{error}</p>
           </div>
         ) : (
           <>
@@ -169,7 +200,7 @@ const LiveScoreWidget: React.FC<LiveScoreWidgetProps> = ({
                     </div>
                   </div>
                   
-                  {score.status === 'live' && (
+                  {score.status === 'live' && score.momentum !== 0 && (
                     <div className={cn("flex items-center space-x-1", getMomentumColor(score.momentum))}>
                       {getMomentumIcon(score.momentum)}
                       <span className="text-xs">Momentum</span>
@@ -242,7 +273,8 @@ const LiveScoreWidget: React.FC<LiveScoreWidgetProps> = ({
             {scores.length === 0 && (
               <div className="text-center py-8">
                 <AlertCircle className="h-12 w-12 text-slate-400 mx-auto mb-2" />
-                <p className="text-slate-400">No live games at this time</p>
+                <p className="text-slate-400">No games available</p>
+                <p className="text-xs text-slate-500 mt-1">Check back during game time</p>
               </div>
             )}
           </>

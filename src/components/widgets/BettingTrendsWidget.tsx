@@ -60,92 +60,33 @@ const BettingTrendsWidget: React.FC<BettingTrendsWidgetProps> = ({
   const [viewType, setViewType] = useState<'overview' | 'detailed'>('overview')
 
   useEffect(() => {
-    const generateBettingTrends = (): BettingTrend[] => {
-      // NO FAKE DATA - RETURN EMPTY ARRAY
-      return []
-
-      const trends: BettingTrend[] = []
-      
-      for (let i = 0; i < maxGames; i++) {
-        const selectedSport = sports[Math.floor(Math.random() * sports.length)] as keyof typeof teams
-        const sportTeams = teams[selectedSport]
-        const homeTeam = sportTeams[Math.floor(Math.random() * sportTeams.length)]
-        let awayTeam = sportTeams[Math.floor(Math.random() * sportTeams.length)]
-        while (awayTeam === homeTeam) {
-          awayTeam = sportTeams[Math.floor(Math.random() * sportTeams.length)]
-        }
-
-        // Generate realistic betting percentages
-        const publicHomeBias = Math.random() * 40 + 30 // 30-70%
-        const sharpHomeBias = Math.random() * 60 + 20 // 20-80%
-        const overBias = Math.random() * 30 + 35 // 35-65%
+    const fetchBettingTrends = async () => {
+      try {
+        setLoading(true)
+        const params = new URLSearchParams()
+        if (sport) params.append('sport', sport)
+        params.append('limit', maxGames.toString())
         
-        const reverseLineMovement = Math.random() > 0.85 // 15% chance
-        const steamMove = Math.random() > 0.90 // 10% chance
-        const contrarian = Math.abs(publicHomeBias - sharpHomeBias) > 20 // Significant difference
-
-        trends.push({
-          gameId: `trend-${i}`,
-          homeTeam,
-          awayTeam,
-          sport: selectedSport,
-          publicPercentage: {
-            homeML: publicHomeBias,
-            awayML: 100 - publicHomeBias,
-            homeSpread: publicHomeBias + Math.random() * 10 - 5,
-            awaySpread: 100 - (publicHomeBias + Math.random() * 10 - 5),
-            over: overBias,
-            under: 100 - overBias
-          },
-          sharpPercentage: {
-            homeML: sharpHomeBias,
-            awayML: 100 - sharpHomeBias,
-            homeSpread: sharpHomeBias + Math.random() * 10 - 5,
-            awaySpread: 100 - (sharpHomeBias + Math.random() * 10 - 5),
-            over: overBias + Math.random() * 20 - 10,
-            under: 100 - (overBias + Math.random() * 20 - 10)
-          },
-          ticketCount: Math.floor(Math.random() * 50000) + 10000,
-          moneyPercentage: {
-            home: sharpHomeBias + Math.random() * 10 - 5,
-            away: 100 - (sharpHomeBias + Math.random() * 10 - 5)
-          },
-          reverseLineMovement,
-          steamMove,
-          contrarian
-        })
+        const response = await fetch(`/api/betting-trends?${params}`)
+        const data = await response.json()
+        
+        if (data.success && data.trends) {
+          setTrends(data.trends)
+        } else {
+          setTrends([])
+        }
+      } catch (error) {
+        console.error('Failed to fetch betting trends:', error)
+        setTrends([])
+      } finally {
+        setLoading(false)
       }
-
-      return trends.sort((a, b) => {
-        if (a.steamMove && !b.steamMove) return -1
-        if (!a.steamMove && b.steamMove) return 1
-        if (a.contrarian && !b.contrarian) return -1
-        if (!a.contrarian && b.contrarian) return 1
-        return b.ticketCount - a.ticketCount
-      })
     }
 
-    setLoading(true)
-    setTimeout(() => {
-      setTrends(generateBettingTrends())
-      setLoading(false)
-    }, 500)
+    fetchBettingTrends()
 
-    // Update trends every 2 minutes
-    const interval = setInterval(() => {
-      setTrends(prev => prev.map(trend => ({
-        ...trend,
-        publicPercentage: {
-          ...trend.publicPercentage,
-          homeML: Math.max(10, Math.min(90, trend.publicPercentage.homeML + (Math.random() - 0.5) * 10))
-        },
-        sharpPercentage: {
-          ...trend.sharpPercentage,
-          homeML: Math.max(10, Math.min(90, trend.sharpPercentage.homeML + (Math.random() - 0.5) * 8))
-        }
-      })))
-    }, 120000)
-
+    // Refresh trends every 2 minutes
+    const interval = setInterval(fetchBettingTrends, 120000)
     return () => clearInterval(interval)
   }, [maxGames, sport])
 

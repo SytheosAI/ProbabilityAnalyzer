@@ -377,113 +377,83 @@ export default function LiveBettingInterface() {
   const [filter, setFilter] = useState<'all' | 'high_value' | 'momentum' | 'closing'>('all')
 
   useEffect(() => {
-    // FETCH REAL LIVE GAMES - NO FAKE DATA
-    const generateLiveGames = (): LiveGame[] => {
-      // RETURN EMPTY ARRAY - NO FAKE GAMES
-      return []
-
-      const games: LiveGame[] = []
-      
-      for (let i = 0; i < 4; i++) {
-        const sport = sports[Math.floor(Math.random() * sports.length)] as keyof typeof teams
-        const sportTeams = teams[sport]
-        const homeTeam = sportTeams[Math.floor(Math.random() * sportTeams.length)]
-        let awayTeam = sportTeams[Math.floor(Math.random() * sportTeams.length)]
-        while (awayTeam === homeTeam) {
-          awayTeam = sportTeams[Math.floor(Math.random() * sportTeams.length)]
-        }
-
-        const game: LiveGame = {
-          id: `live-game-${i}`,
-          sport,
-          homeTeam,
-          awayTeam,
-          homeScore: Math.floor(Math.random() * 100) + 50,
-          awayScore: Math.floor(Math.random() * 100) + 50,
-          quarter: ['1st', '2nd', '3rd', '4th'][Math.floor(Math.random() * 4)],
-          timeRemaining: `${Math.floor(Math.random() * 15)}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}`,
-          status: 'live',
-          possession: Math.random() > 0.5 ? 'home' : 'away',
-          momentum: (Math.random() - 0.5) * 200,
-          lastPlay: 'Johnson 3-point shot made, assist by Davis',
-          keyPlayers: [
-            { name: 'Player A', stats: '23 PTS, 7 REB', status: 'hot' },
-            { name: 'Player B', stats: '15 PTS, 4 AST', status: 'normal' },
-            { name: 'Player C', stats: '8 PTS, 2 TO', status: 'cold' }
-          ]
-        }
+    const fetchLiveGames = async () => {
+      try {
+        const response = await fetch('/api/live-games?includeOdds=true&includeStats=true')
+        const data = await response.json()
         
-        games.push(game)
-      }
-      
-      return games
-    }
-
-    // Generate mock live odds and bets
-    const generateLiveData = () => {
-      const games = generateLiveGames()
-      setLiveGames(games)
-
-      const odds: { [gameId: string]: LiveOdds } = {}
-      const bets: { [gameId: string]: LiveBet[] } = {}
-
-      games.forEach(game => {
-        odds[game.id] = {
-          gameId: game.id,
-          moneyline: { home: -120 + Math.random() * 40, away: 100 + Math.random() * 40 },
-          spread: { line: Math.random() * 10 - 5, home: -110, away: -110 },
-          total: { line: 220 + Math.random() * 20, over: -108, under: -112 },
-          props: [
-            { type: 'Player Points', line: 25.5, over: -115, under: -105, player: 'LeBron James' },
-            { type: 'Team 3PTs', line: 12.5, over: -110, under: -110 }
-          ],
-          lastUpdate: new Date().toISOString(),
-          movement: {
-            ml: Math.random() > 0.6 ? 'up' : Math.random() > 0.3 ? 'down' : 'stable',
-            spread: Math.random() > 0.6 ? 'up' : Math.random() > 0.3 ? 'down' : 'stable',
-            total: Math.random() > 0.6 ? 'up' : Math.random() > 0.3 ? 'down' : 'stable'
+        if (data.success && data.data) {
+          const games: LiveGame[] = []
+          const odds: { [gameId: string]: LiveOdds } = {}
+          const bets: { [gameId: string]: LiveBet[] } = {}
+          
+          // Process real live games data
+          for (const sportData of data.data) {
+            for (const game of sportData.games) {
+              if (game.status === 'inprogress') {
+                const gameId = game.id
+                
+                // Create live game object from real data
+                const liveGame: LiveGame = {
+                  id: gameId,
+                  sport: sportData.sport,
+                  homeTeam: game.home_team?.name || 'Home Team',
+                  awayTeam: game.away_team?.name || 'Away Team',
+                  homeScore: game.home_points || 0,
+                  awayScore: game.away_points || 0,
+                  quarter: game.quarter || 'Unknown',
+                  timeRemaining: game.clock || 'Unknown',
+                  status: 'live',
+                  possession: game.possession,
+                  momentum: 0, // Calculate from real data
+                  lastPlay: 'Live game in progress',
+                  keyPlayers: game.players || []
+                }
+                
+                games.push(liveGame)
+                
+                // Process odds if available
+                if (game.odds) {
+                  odds[gameId] = {
+                    gameId,
+                    moneyline: game.odds.moneyline || { home: 0, away: 0 },
+                    spread: game.odds.spread || { line: 0, home: -110, away: -110 },
+                    total: game.odds.total || { line: 0, over: -110, under: -110 },
+                    props: game.odds.props || [],
+                    lastUpdate: new Date().toISOString(),
+                    movement: game.odds.movement || { ml: 'stable', spread: 'stable', total: 'stable' }
+                  }
+                  
+                  // Create betting opportunities from real odds
+                  bets[gameId] = []
+                  // Add real betting opportunities here based on odds analysis
+                }
+              }
+            }
           }
+          
+          setLiveGames(games)
+          setLiveOdds(odds)
+          setLiveBets(bets)
+        } else {
+          // No live games available
+          setLiveGames([])
+          setLiveOdds({})
+          setLiveBets({})
         }
-
-        bets[game.id] = [
-          {
-            id: `bet-${game.id}-1`,
-            gameId: game.id,
-            type: 'ml',
-            selection: `${game.homeTeam} ML`,
-            odds: odds[game.id].moneyline.home,
-            probability: 0.65,
-            expectedValue: Math.random() * 15 - 2,
-            confidence: 0.85,
-            timeLeft: Math.random() * 300 + 60,
-            momentum: Math.random() > 0.6 ? 'with' : Math.random() > 0.3 ? 'against' : 'neutral',
-            recommendation: Math.random() > 0.7 ? 'strong_buy' : Math.random() > 0.4 ? 'buy' : Math.random() > 0.2 ? 'hold' : 'avoid'
-          },
-          {
-            id: `bet-${game.id}-2`,
-            gameId: game.id,
-            type: 'total',
-            selection: `Over ${odds[game.id].total.line}`,
-            odds: odds[game.id].total.over,
-            probability: 0.52,
-            expectedValue: Math.random() * 10 - 1,
-            confidence: 0.72,
-            timeLeft: Math.random() * 200 + 30,
-            momentum: Math.random() > 0.6 ? 'with' : Math.random() > 0.3 ? 'against' : 'neutral',
-            recommendation: Math.random() > 0.7 ? 'strong_buy' : Math.random() > 0.4 ? 'buy' : Math.random() > 0.2 ? 'hold' : 'avoid'
-          }
-        ]
-      })
-
-      setLiveOdds(odds)
-      setLiveBets(bets)
+      } catch (error) {
+        console.error('Failed to fetch live games:', error)
+        setLiveGames([])
+        setLiveOdds({})
+        setLiveBets({})
+      }
     }
 
-    generateLiveData()
+    fetchLiveGames()
 
     // Auto refresh
     if (autoRefresh) {
-      const interval = setInterval(generateLiveData, refreshInterval * 1000)
+      const interval = setInterval(fetchLiveGames, refreshInterval * 1000)
       return () => clearInterval(interval)
     }
   }, [autoRefresh, refreshInterval])

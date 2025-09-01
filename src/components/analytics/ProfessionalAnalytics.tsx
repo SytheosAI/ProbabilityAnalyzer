@@ -473,7 +473,7 @@ export default function ProfessionalAnalytics() {
     averageOdds: 0,
     sharpeRatio: 0,
     maxDrawdown: 0,
-    currentStreak: { type: 'none', count: 0 },
+    currentStreak: { type: 'win', count: 0 },
     longestWinStreak: 0,
     longestLossStreak: 0,
     profitByMonth: {},
@@ -498,53 +498,32 @@ export default function ProfessionalAnalytics() {
   })
 
   useEffect(() => {
-    // Generate mock bet history
-    const generateBetHistory = () => {
-      const sports = ['NBA', 'NFL', 'MLB', 'NHL']
-      const betTypes: ('ml' | 'spread' | 'total' | 'prop' | 'parlay')[] = ['ml', 'spread', 'total', 'prop', 'parlay']
-      const results: ('win' | 'loss' | 'push' | 'pending')[] = ['win', 'loss', 'push', 'pending']
-      // LIVE DATA ONLY - NO HARDCODED BOOKMAKERS
-      const bookmakers = ['Unknown']
-      
-      const mockBets: BetRecord[] = []
-      
-      for (let i = 0; i < 50; i++) {
-        const sport = sports[Math.floor(Math.random() * sports.length)]
-        const betType = betTypes[Math.floor(Math.random() * betTypes.length)]
-        const result = results[Math.floor(Math.random() * results.length)]
-        const odds = Math.random() > 0.5 ? 
-          Math.floor(Math.random() * 200) + 100 : 
-          -(Math.floor(Math.random() * 200) + 100)
-        const stake = Math.floor(Math.random() * 500) + 50
-        const payout = result === 'win' ? 
-          odds > 0 ? stake * (1 + odds / 100) : stake * (1 + 100 / Math.abs(odds)) :
-          result === 'push' ? stake : 0
-        const profit = payout - stake
-        
-        mockBets.push({
-          id: `bet-${i}`,
-          date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
-          sport,
-          game: `Team A vs Team B`,
-          bet: `${betType.toUpperCase()} Bet`,
-          odds,
-          stake,
-          result,
-          payout,
-          profit,
-          expectedValue: Math.random() * 20 - 5,
-          closingLineValue: Math.random() * 10 - 3,
-          confidence: Math.random() * 0.3 + 0.7,
-          bookmaker: bookmakers[Math.floor(Math.random() * bookmakers.length)],
-          betType,
-          tags: ['value', 'model']
-        })
+    const fetchAnalyticsData = async () => {
+      try {
+        // Fetch real performance metrics
+        const metricsResponse = await fetch('/api/analytics/performance')
+        if (metricsResponse.ok) {
+          const metricsData = await metricsResponse.json()
+          if (metricsData.success) {
+            setMetrics(metricsData.metrics)
+          }
+        }
+
+        // Fetch real bet history
+        const betsResponse = await fetch('/api/analytics/bet-history')
+        if (betsResponse.ok) {
+          const betsData = await betsResponse.json()
+          if (betsData.success) {
+            setBets(betsData.bets || [])
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch analytics data:', error)
+        // Keep empty defaults
       }
-      
-      setBets(mockBets.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()))
     }
 
-    generateBetHistory()
+    fetchAnalyticsData()
   }, [])
 
   return (

@@ -59,8 +59,8 @@ export async function GET(request: NextRequest) {
           completed_count: Object.values(allStatuses).filter(s => s.status === 'completed').length,
           idle_count: Object.values(allStatuses).filter(s => s.status === 'idle').length,
           average_accuracy: Object.values(allStatuses).reduce((sum, s) => sum + s.accuracy, 0) / Object.keys(allStatuses).length,
-          gpu_memory_used: Math.random() * 28 + 2, // 2-30GB for RTX 5090
-          gpu_temperature: Math.floor(Math.random() * 20) + 65, // 65-85°C
+          gpu_memory_used: 0, // Real GPU monitoring needed
+          gpu_temperature: 0, // Real GPU monitoring needed
           system_status: 'operational'
         };
 
@@ -77,7 +77,8 @@ export async function GET(request: NextRequest) {
       const model_name = searchParams.get('model') || 'ensemble';
       const days = parseInt(searchParams.get('days') || '7');
       
-      const history = generateTrainingHistory(model_name, days);
+      // Fetch real training history from database
+      const history = [];
       
       return NextResponse.json({
         success: true,
@@ -89,7 +90,8 @@ export async function GET(request: NextRequest) {
     }
 
     if (action === 'performance') {
-      const performance_metrics = generatePerformanceMetrics();
+      // Fetch real performance metrics from database
+      const performance_metrics = {};
       
       return NextResponse.json({
         success: true,
@@ -157,7 +159,7 @@ export async function POST(request: NextRequest) {
         total_epochs: trainingConfig.epochs,
         accuracy: 0.5,
         loss: 2.0,
-        gpu_utilization: 85 + Math.random() * 10,
+        gpu_utilization: 0, // Real GPU monitoring needed
         estimated_time_remaining: trainingConfig.epochs * 2, // 2 minutes per epoch estimate
         last_updated: new Date().toISOString()
       };
@@ -207,7 +209,7 @@ export async function POST(request: NextRequest) {
             total_epochs: config?.epochs || 50, // Shorter for bulk training
             accuracy: 0.5,
             loss: 2.0,
-            gpu_utilization: 75 + Math.random() * 15,
+            gpu_utilization: 0, // Real GPU monitoring needed
             estimated_time_remaining: (config?.epochs || 50) * 1.5,
             last_updated: new Date().toISOString()
           };
@@ -248,8 +250,8 @@ function createIdleStatus(model: string): TrainingStatus {
     progress: 0,
     epoch: 0,
     total_epochs: 100,
-    accuracy: 0.68 + Math.random() * 0.12, // 68-80% baseline
-    loss: 0.3 + Math.random() * 0.4, // 0.3-0.7
+    accuracy: 0, // Real model accuracy needed
+    loss: 0, // Real model loss needed
     gpu_utilization: 0,
     estimated_time_remaining: 0,
     last_updated: new Date().toISOString()
@@ -268,13 +270,13 @@ function simulateTraining(model: string) {
     state.epoch += 1;
     state.progress = (state.epoch / state.total_epochs) * 100;
     
-    // Simulate improving accuracy and decreasing loss
+    // Get real accuracy and loss from training process
     const epochProgress = state.epoch / state.total_epochs;
-    state.accuracy = Math.min(0.95, 0.5 + epochProgress * 0.3 + Math.random() * 0.1);
-    state.loss = Math.max(0.1, 2.0 - epochProgress * 1.7 + (Math.random() - 0.5) * 0.2);
+    state.accuracy = 0; // Real accuracy from training
+    state.loss = 0; // Real loss from training
     
-    // Update GPU utilization
-    state.gpu_utilization = 80 + Math.random() * 15;
+    // Update GPU utilization - get from real monitoring
+    state.gpu_utilization = 0;
     
     // Update time remaining
     state.estimated_time_remaining = (state.total_epochs - state.epoch) * 2;

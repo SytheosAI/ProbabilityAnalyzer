@@ -81,7 +81,7 @@ const StatCard = ({
 )
 
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'moneylines' | 'parlays' | 'calculator' | 'analytics' | 'live_betting' | 'heatmaps'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'moneylines' | 'parlays' | 'calculator' | 'analytics' | 'live_betting' | 'heatmaps' | 'enhanced'>('dashboard')
   const [showAdvancedDropdown, setShowAdvancedDropdown] = useState(false)
   const [liveDataStats, setLiveDataStats] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(false)
