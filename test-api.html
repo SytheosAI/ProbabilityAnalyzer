@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+</head>
+<body>
+    <h1>Testing Live Games API</h1>
+    <div id="result"></div>
+    <script>
+        fetch('http://localhost:3002/api/sports/live-games?days=3')
+            .then(res => res.json())
+            .then(data => {
+                const div = document.getElementById('result');
+                div.innerHTML = `
+                    <h2>API Response:</h2>
+                    <p>Success: ${data.success}</p>
+                    <p>Total Games: ${data.data?.games?.length || 0}</p>
+                    <p>First Game: ${JSON.stringify(data.data?.games?.[0])}</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            })
+            .catch(err => {
+                document.getElementById('result').innerHTML = `ERROR: ${err}`;
+            });
+    </script>
+</body>
+</html>
