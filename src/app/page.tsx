@@ -119,7 +119,16 @@ export default function HomePage() {
     
     try {
       // Try new live games API first
-      const response = await fetch(`/api/sports/live-games?days=${selectedDays}`)
+      const apiUrl = `/api/sports/live-games?days=${selectedDays}`
+      console.log('🔥 FETCHING FROM:', apiUrl)
+      
+      const response = await fetch(apiUrl)
+      console.log('📡 Response status:', response.status, response.statusText)
+      
+      if (!response.ok) {
+        throw new Error(`API failed: ${response.status} ${response.statusText}`)
+      }
+      
       const result = await response.json()
       
       console.log('API Response:', result) // DEBUG LOG

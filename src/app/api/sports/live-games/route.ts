@@ -5,6 +5,9 @@ import { unifiedApi } from '@/services/unifiedApiService';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
+  console.log('🚀 Live Games API Called!')
+  console.log('Environment:', process.env.NODE_ENV)
+  
   try {
     const { searchParams } = new URL(req.url);
     const daysParam = searchParams.get('days');
