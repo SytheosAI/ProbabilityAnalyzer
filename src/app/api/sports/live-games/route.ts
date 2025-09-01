@@ -13,14 +13,9 @@ export async function GET(req: NextRequest) {
     // Get all games from unified API service
     const allGames = await unifiedApi.getAllGames();
     
-    // Filter by days
-    const now = new Date();
-    const futureDate = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
-    
-    const filteredGames = allGames.filter(game => {
-      const gameDate = new Date(game.date);
-      return gameDate >= now && gameDate <= futureDate;
-    });
+    // Don't filter out games - show all available games
+    // ESPN returns upcoming games which is what we want
+    const filteredGames = allGames;
     
     // Calculate real statistics
     const stats = {
@@ -68,8 +63,8 @@ export async function GET(req: NextRequest) {
           daysAhead: days,
           totalGames: filteredGames.length,
           dateRange: {
-            from: now.toISOString().split('T')[0],
-            to: futureDate.toISOString().split('T')[0]
+            from: new Date().toISOString().split('T')[0],
+            to: new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
           }
         }
       },
