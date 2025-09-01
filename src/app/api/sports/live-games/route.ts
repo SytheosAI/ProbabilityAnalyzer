@@ -1,6 +1,7 @@
 // Live Games API - UNIFIED REAL DATA FROM ALL SOURCES
 import { NextRequest, NextResponse } from 'next/server';
 import { unifiedApi } from '@/services/unifiedApiService';
+import { dataStorage } from '@/services/dataStorageService';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +18,15 @@ export async function GET(req: NextRequest) {
     
     // Get all games from unified API service
     const allGames = await unifiedApi.getAllGames();
+    
+    // Store games for ML training
+    try {
+      await dataStorage.storeGames(allGames);
+      console.log(`💾 Stored ${allGames.length} games for training`);
+    } catch (storageError) {
+      console.error('Failed to store games:', storageError);
+      // Continue even if storage fails
+    }
     
     // Don't filter out games - show all available games
     // ESPN returns upcoming games which is what we want

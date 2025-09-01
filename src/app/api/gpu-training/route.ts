@@ -1,10 +1,30 @@
 // API endpoint for GPU training operations
 import { NextRequest, NextResponse } from 'next/server';
-import { GPUTrainingPipeline, TrainingManager } from '@/lib/gpuTraining';
+
+export const dynamic = 'force-dynamic';
+export const maxDuration = 30; // Vercel timeout
+
+// Lazy load to avoid build issues
+let GPUTrainingPipeline: any;
+let TrainingManager: any;
+
+async function loadGPUModules() {
+  if (!GPUTrainingPipeline || !TrainingManager) {
+    try {
+      const module = await import('@/lib/gpuTraining');
+      GPUTrainingPipeline = module.GPUTrainingPipeline;
+      TrainingManager = module.TrainingManager;
+    } catch (error) {
+      console.error('Failed to load GPU training modules:', error);
+      throw new Error('GPU training modules not available');
+    }
+  }
+}
 
 // POST - Start GPU training
 export async function POST(req: NextRequest) {
   try {
+    await loadGPUModules();
     const { action, sport } = await req.json();
     
     if (action === 'start_training') {
@@ -81,6 +101,8 @@ export async function POST(req: NextRequest) {
 // GET - Get training status
 export async function GET() {
   try {
+    await loadGPUModules();
+    
     const [status, bestModels] = await Promise.all([
       TrainingManager.getTrainingStatus(),
       TrainingManager.getBestModels(5)
