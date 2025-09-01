@@ -29,6 +29,7 @@ import ParlayOptimizer from '@/components/ParlayOptimizer'
 import AdvancedParlayOptimizer from '@/components/advanced/AdvancedParlayOptimizer'
 import ProbabilityCalculator from '@/components/ProbabilityCalculator'
 import EnhancedDashboard from '@/components/EnhancedDashboard'
+import EnhancedAnalytics from '@/components/EnhancedAnalytics'
 
 // Lazy load heavy components for performance
 const ProfessionalAnalytics = lazy(() => import('@/components/analytics/ProfessionalAnalytics'))
@@ -219,6 +220,14 @@ export default function HomePage() {
                 Analytics
               </Button>
               <Button
+                variant={activeTab === 'enhanced' ? 'default' : 'ghost'}
+                onClick={() => setActiveTab('enhanced')}
+                className="text-white"
+              >
+                <Zap className="h-4 w-4 mr-2" />
+                Enhanced
+              </Button>
+              <Button
                 variant={activeTab === 'live_betting' ? 'default' : 'ghost'}
                 onClick={() => setActiveTab('live_betting')}
                 className="text-white"
@@ -345,6 +354,19 @@ export default function HomePage() {
             }>
               <LiveBettingInterface />
             </Suspense>
+          </div>
+        )}
+
+        {activeTab === 'enhanced' && (
+          <div className="space-y-6">
+            <div className="text-center space-y-2">
+              <h2 className="text-3xl font-bold text-white">Enhanced Cross-Reference Analytics</h2>
+              <p className="text-slate-400 max-w-2xl mx-auto">
+                ESPN + Sports Radar data combined for comprehensive betting intelligence with sharp money indicators, 
+                injury impacts, environmental factors, and advanced pattern recognition
+              </p>
+            </div>
+            <EnhancedAnalytics sport="football" league="nfl" />
           </div>
         )}
 
