@@ -463,35 +463,27 @@ const ModelPerformanceAnalysis = ({ metrics }: { metrics: PerformanceMetrics }) 
 }
 
 export default function ProfessionalAnalytics() {
+  // LIVE DATA ONLY - NO HARDCODED PERFORMANCE METRICS
   const [metrics, setMetrics] = useState<PerformanceMetrics>({
-    totalBets: 247,
-    winRate: 0.642,
-    roi: 14.7,
-    totalProfit: 1847.50,
-    totalStaked: 12580,
-    averageOdds: -108,
-    sharpeRatio: 2.34,
-    maxDrawdown: 0.087,
-    currentStreak: { type: 'win', count: 7 },
-    longestWinStreak: 12,
-    longestLossStreak: 5,
+    totalBets: 0,
+    winRate: 0,
+    roi: 0,
+    totalProfit: 0,
+    totalStaked: 0,
+    averageOdds: 0,
+    sharpeRatio: 0,
+    maxDrawdown: 0,
+    currentStreak: { type: 'none', count: 0 },
+    longestWinStreak: 0,
+    longestLossStreak: 0,
     profitByMonth: {},
     roiByMonth: {},
-    performanceBySport: {
-      'NBA': { winRate: 0.67, roi: 18.3, count: 89 },
-      'NFL': { winRate: 0.61, roi: 12.1, count: 73 },
-      'MLB': { winRate: 0.58, roi: 8.7, count: 45 },
-      'NHL': { winRate: 0.71, roi: 22.4, count: 40 }
-    },
-    performanceByBetType: {
-      'ml': { winRate: 0.64, roi: 15.2, count: 127 },
-      'spread': { winRate: 0.59, roi: 11.8, count: 86 },
-      'total': { winRate: 0.72, roi: 19.7, count: 34 }
-    },
-    closingLineValue: 6.8,
-    modelAccuracy: 73.4,
-    avgConfidence: 0.847,
-    bankrollGrowth: [0, 2.1, 4.8, 3.2, 7.1, 9.4, 11.8, 8.9, 12.3, 15.7, 14.2, 18.1, 16.8, 21.4, 19.9, 23.7, 22.1, 26.3, 28.9, 25.4, 29.1, 31.8, 30.2, 34.5, 32.7, 36.9, 35.1, 38.7, 41.2, 39.8]
+    performanceBySport: {},
+    performanceByBetType: {},
+    closingLineValue: 0,
+    modelAccuracy: 0,
+    avgConfidence: 0,
+    bankrollGrowth: []
   })
 
   const [bets, setBets] = useState<BetRecord[]>([])
@@ -511,7 +503,8 @@ export default function ProfessionalAnalytics() {
       const sports = ['NBA', 'NFL', 'MLB', 'NHL']
       const betTypes: ('ml' | 'spread' | 'total' | 'prop' | 'parlay')[] = ['ml', 'spread', 'total', 'prop', 'parlay']
       const results: ('win' | 'loss' | 'push' | 'pending')[] = ['win', 'loss', 'push', 'pending']
-      const bookmakers = ['DraftKings', 'FanDuel', 'BetMGM', 'Caesars', 'PointsBet']
+      // LIVE DATA ONLY - NO HARDCODED BOOKMAKERS
+      const bookmakers = ['Unknown']
       
       const mockBets: BetRecord[] = []
       

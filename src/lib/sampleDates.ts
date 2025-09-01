@@ -1,7 +1,7 @@
-// Sample dates with actual game data for each sport
-// These are dates known to have games for demonstration purposes
+// LIVE DATA ONLY - NO HARDCODED SAMPLE DATES
+// All dates will be dynamically generated from current date/time
 
-export const SAMPLE_DATES = {
+export const SAMPLE_DATES = {}
   // NBA - Use recent season dates (2024-25 season runs Oct 2024 - June 2025)
   nba: {
     year: '2024',

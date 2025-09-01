@@ -34,8 +34,8 @@ export async function GET(req: NextRequest) {
           const realGame = {
             id: game.id,
             sport: sportData.sport,
-            homeTeam: game.home_team?.name || `${game.home_team?.market} ${game.home_team?.alias}`,
-            awayTeam: game.away_team?.name || `${game.away_team?.market} ${game.away_team?.alias}`,
+            homeTeam: game.home?.market ? `${game.home.market} ${game.home.name}` : game.home?.name || 'Home Team',
+            awayTeam: game.away?.market ? `${game.away.market} ${game.away.name}` : game.away?.name || 'Away Team',
             homeScore: game.home_points || null,
             awayScore: game.away_points || null,
             status: game.status,

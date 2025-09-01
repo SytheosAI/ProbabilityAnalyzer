@@ -79,54 +79,8 @@ export interface PlayerStats {
 const searchCache = new Map<string, { results: SearchResult[]; timestamp: number }>();
 const CACHE_DURATION = 300000; // 5 minutes
 
-// Team name mappings for each sport
-const TEAM_MAPPINGS: Record<string, Record<string, TeamResult>> = {
-  nba: {
-    'lakers': { id: '583ecae2-fb46-11e1-82cb-f4ce4684ea4c', name: 'Lakers', fullName: 'Los Angeles Lakers', city: 'Los Angeles', abbreviation: 'LAL', conference: 'Western', division: 'Pacific' },
-    'warriors': { id: '583ec825-fb46-11e1-82cb-f4ce4684ea4c', name: 'Warriors', fullName: 'Golden State Warriors', city: 'Golden State', abbreviation: 'GSW', conference: 'Western', division: 'Pacific' },
-    'celtics': { id: '583eccfa-fb46-11e1-82cb-f4ce4684ea4c', name: 'Celtics', fullName: 'Boston Celtics', city: 'Boston', abbreviation: 'BOS', conference: 'Eastern', division: 'Atlantic' },
-    'heat': { id: '583ecea6-fb46-11e1-82cb-f4ce4684ea4c', name: 'Heat', fullName: 'Miami Heat', city: 'Miami', abbreviation: 'MIA', conference: 'Eastern', division: 'Southeast' },
-    'nets': { id: '583ec9d6-fb46-11e1-82cb-f4ce4684ea4c', name: 'Nets', fullName: 'Brooklyn Nets', city: 'Brooklyn', abbreviation: 'BKN', conference: 'Eastern', division: 'Atlantic' },
-    'suns': { id: '583ecfa8-fb46-11e1-82cb-f4ce4684ea4c', name: 'Suns', fullName: 'Phoenix Suns', city: 'Phoenix', abbreviation: 'PHX', conference: 'Western', division: 'Pacific' },
-    'bucks': { id: '583ecefd-fb46-11e1-82cb-f4ce4684ea4c', name: 'Bucks', fullName: 'Milwaukee Bucks', city: 'Milwaukee', abbreviation: 'MIL', conference: 'Eastern', division: 'Central' },
-    'nuggets': { id: '583ed102-fb46-11e1-82cb-f4ce4684ea4c', name: 'Nuggets', fullName: 'Denver Nuggets', city: 'Denver', abbreviation: 'DEN', conference: 'Western', division: 'Northwest' }
-  },
-  nfl: {
-    'patriots': { id: '97354895-8c77-4fd4-a860-32e62ea7382a', name: 'Patriots', fullName: 'New England Patriots', city: 'New England', abbreviation: 'NE', conference: 'AFC', division: 'East' },
-    'chiefs': { id: '6680d28d-d4d2-49f6-aace-5292d3ec02c2', name: 'Chiefs', fullName: 'Kansas City Chiefs', city: 'Kansas City', abbreviation: 'KC', conference: 'AFC', division: 'West' },
-    'bills': { id: '768c92aa-75ff-4a43-bcc0-f2798c2e1724', name: 'Bills', fullName: 'Buffalo Bills', city: 'Buffalo', abbreviation: 'BUF', conference: 'AFC', division: 'East' },
-    'cowboys': { id: 'e627eec7-bbae-4fa4-8e73-8e1d6bc5c060', name: 'Cowboys', fullName: 'Dallas Cowboys', city: 'Dallas', abbreviation: 'DAL', conference: 'NFC', division: 'East' },
-    'packers': { id: 'a20471b4-a8d9-40c7-95ad-90cc30e46932', name: 'Packers', fullName: 'Green Bay Packers', city: 'Green Bay', abbreviation: 'GB', conference: 'NFC', division: 'North' },
-    'eagles': { id: '386bdbf9-9eea-4869-bb9a-274b0bc66e80', name: 'Eagles', fullName: 'Philadelphia Eagles', city: 'Philadelphia', abbreviation: 'PHI', conference: 'NFC', division: 'East' },
-    '49ers': { id: 'f0e724b0-4cbf-495a-be47-013907608da9', name: '49ers', fullName: 'San Francisco 49ers', city: 'San Francisco', abbreviation: 'SF', conference: 'NFC', division: 'West' }
-  },
-  mlb: {
-    'yankees': { id: 'a09ec676-f887-43dc-bbb3-cf4bbaee9a18', name: 'Yankees', fullName: 'New York Yankees', city: 'New York', abbreviation: 'NYY', conference: 'American', division: 'East' },
-    'red sox': { id: '93941372-eb4c-4c40-aced-fe3267174393', name: 'Red Sox', fullName: 'Boston Red Sox', city: 'Boston', abbreviation: 'BOS', conference: 'American', division: 'East' },
-    'dodgers': { id: 'ef64da7f-cfaf-4300-87b0-9313386b977c', name: 'Dodgers', fullName: 'Los Angeles Dodgers', city: 'Los Angeles', abbreviation: 'LAD', conference: 'National', division: 'West' },
-    'giants': { id: 'a7723160-10b7-4277-a309-d8dd95a8ae65', name: 'Giants', fullName: 'San Francisco Giants', city: 'San Francisco', abbreviation: 'SF', conference: 'National', division: 'West' }
-  },
-  nhl: {
-    'rangers': { id: '441781b9-0f24-11e2-8525-18a905767e44', name: 'Rangers', fullName: 'New York Rangers', city: 'New York', abbreviation: 'NYR', conference: 'Eastern', division: 'Metropolitan' },
-    'bruins': { id: '4416091c-0f24-11e2-8525-18a905767e44', name: 'Bruins', fullName: 'Boston Bruins', city: 'Boston', abbreviation: 'BOS', conference: 'Eastern', division: 'Atlantic' },
-    'lightning': { id: '4417b7d7-0f24-11e2-8525-18a905767e44', name: 'Lightning', fullName: 'Tampa Bay Lightning', city: 'Tampa Bay', abbreviation: 'TB', conference: 'Eastern', division: 'Atlantic' },
-    'avalanche': { id: '44153da1-0f24-11e2-8525-18a905767e44', name: 'Avalanche', fullName: 'Colorado Avalanche', city: 'Colorado', abbreviation: 'COL', conference: 'Western', division: 'Central' }
-  },
-  ncaamb: {
-    'duke': { id: 'faeb1160-5d15-11e1-90a9-b48f3d47f046', name: 'Duke', fullName: 'Duke Blue Devils', city: 'Durham', abbreviation: 'DUKE', conference: 'ACC', division: 'Atlantic Coast' },
-    'kentucky': { id: 'e52c9644-717a-46f4-bf16-aeca000b3b44', name: 'Kentucky', fullName: 'Kentucky Wildcats', city: 'Lexington', abbreviation: 'UK', conference: 'SEC', division: 'Southeastern' },
-    'kansas': { id: 'fae4855b-1b64-4b40-a632-9ed345e1e952', name: 'Kansas', fullName: 'Kansas Jayhawks', city: 'Lawrence', abbreviation: 'KU', conference: 'Big 12', division: 'Big 12' },
-    'north carolina': { id: 'd366712d-e51a-419f-ba6e-364447093106', name: 'North Carolina', fullName: 'North Carolina Tar Heels', city: 'Chapel Hill', abbreviation: 'UNC', conference: 'ACC', division: 'Atlantic Coast' }
-  },
-  ncaafb: {
-    'alabama': { id: '19775492-f1eb-4bc5-9e15-078ebd689c0f', name: 'Alabama', fullName: 'Alabama Crimson Tide', city: 'Tuscaloosa', abbreviation: 'ALA', conference: 'SEC', division: 'West' },
-    'georgia': { id: '2f7e9178-4e79-44d9-8a73-097fd7ad22f8', name: 'Georgia', fullName: 'Georgia Bulldogs', city: 'Athens', abbreviation: 'UGA', conference: 'SEC', division: 'East' },
-    'ohio state': { id: 'c7569eae-5b93-4197-b204-6f3a62146b25', name: 'Ohio State', fullName: 'Ohio State Buckeyes', city: 'Columbus', abbreviation: 'OSU', conference: 'Big Ten', division: 'East' },
-    'michigan': { id: 'd3e8c416-e643-4d5e-be8e-c0dddcd0f0e4', name: 'Michigan', fullName: 'Michigan Wolverines', city: 'Ann Arbor', abbreviation: 'MICH', conference: 'Big Ten', division: 'East' }
-  },
-  wnba: {
-    'storm': { id: '3f667445-0e7f-11e2-bde9-18a905767e44', name: 'Storm', fullName: 'Seattle Storm', city: 'Seattle', abbreviation: 'SEA', conference: 'Western', division: 'Western' },
-    'aces': { id: '8c7b1e2f-4432-4441-be52-2d98ba34da8f', name: 'Aces', fullName: 'Las Vegas Aces', city: 'Las Vegas', abbreviation: 'LV', conference: 'Western', division: 'Western' },
+// LIVE DATA ONLY - NO HARDCODED TEAM MAPPINGS
+const TEAM_MAPPINGS: Record<string, Record<string, TeamResult>> = {}
     'liberty': { id: '2a1613e6-0e7f-11e2-bde9-18a905767e44', name: 'Liberty', fullName: 'New York Liberty', city: 'New York', abbreviation: 'NY', conference: 'Eastern', division: 'Eastern' },
     'sun': { id: '3ee7c180-4f4e-4920-8fb3-9a066d8e373e', name: 'Sun', fullName: 'Connecticut Sun', city: 'Connecticut', abbreviation: 'CONN', conference: 'Eastern', division: 'Eastern' }
   },
@@ -138,8 +92,8 @@ const TEAM_MAPPINGS: Record<string, Record<string, TeamResult>> = {
   }
 };
 
-// Player name mappings (sample data)
-const PLAYER_MAPPINGS: Record<string, PlayerResult[]> = {
+// LIVE DATA ONLY - NO HARDCODED PLAYER MAPPINGS  
+const PLAYER_MAPPINGS: Record<string, PlayerResult[]> = {}
   'lebron james': [{
     id: 'ab532a66-9314-4d57-ade7-bb54a70c65ad',
     name: 'LeBron James',

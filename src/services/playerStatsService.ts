@@ -288,25 +288,10 @@ function analyzePlayerTrends(stats: PlayerStats): StatTrends {
   return trends;
 }
 
-// Generate mock player statistics for testing
+// LIVE DATA ONLY - NO MOCK PLAYER STATISTICS
 function generateMockPlayerStats(sport: string, playerId: string): PlayerStats {
-  const mockNames: Record<string, string[]> = {
-    nba: ['LeBron James', 'Stephen Curry', 'Kevin Durant', 'Giannis Antetokounmpo'],
-    nfl: ['Patrick Mahomes', 'Josh Allen', 'Lamar Jackson', 'Justin Jefferson'],
-    mlb: ['Shohei Ohtani', 'Ronald Acuna Jr', 'Mookie Betts', 'Aaron Judge'],
-    nhl: ['Connor McDavid', 'Auston Matthews', 'Nathan MacKinnon', 'Sidney Crosby'],
-    wnba: ["A'ja Wilson", 'Breanna Stewart', 'Diana Taurasi', 'Sue Bird'],
-    tennis: ['Novak Djokovic', 'Carlos Alcaraz', 'Jannik Sinner', 'Daniil Medvedev'],
-    golf: ['Scottie Scheffler', 'Jon Rahm', 'Rory McIlroy', 'Viktor Hovland'],
-    soccer: ['Lionel Messi', 'Erling Haaland', 'Kylian Mbappe', 'Mohamed Salah'],
-    mls: ['Lorenzo Insigne', 'Hany Mukhtar', 'Carles Gil', 'Diego Rossi'],
-    ufc: ['Jon Jones', 'Islam Makhachev', 'Israel Adesanya', 'Alex Pereira'],
-    boxing: ['Canelo Alvarez', 'Tyson Fury', 'Terence Crawford', 'Errol Spence Jr'],
-    ncaamb: ['Zach Edey', 'Armando Bacot', 'Hunter Dickinson', 'Marcus Sasser'],
-    ncaafb: ['Caleb Williams', 'Marvin Harrison Jr', 'Blake Corum', 'Jaylen Daniels']
-  };
-  
-  const names = mockNames[sport] || ['Player 1', 'Player 2'];
+  // Return empty/null stats instead of hardcoded player names
+  const names = ['Unknown Player'];
   const randomName = names[Math.floor(Math.random() * names.length)];
   
   const mockStats: PlayerStats = {

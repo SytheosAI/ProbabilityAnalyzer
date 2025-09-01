@@ -12,41 +12,8 @@ interface ValueBetFinderProps {
 
 export function ValueBetFinder({ sport, compact = false, limit, onSelectBet }: ValueBetFinderProps) {
   // Mock value bets data
-  const valueBets = [
-    {
-      id: '1',
-      game: 'Lakers vs Celtics',
-      bet: 'Lakers -3.5',
-      odds: -110,
-      expectedValue: 4.2,
-      confidence: 68,
-      edgePercentage: 3.8,
-      recommendation: 'Strong Buy',
-      reason: 'Line movement indicates sharp money'
-    },
-    {
-      id: '2',
-      game: 'Chiefs vs Bills',
-      bet: 'Over 48.5',
-      odds: -105,
-      expectedValue: 3.1,
-      confidence: 62,
-      edgePercentage: 2.9,
-      recommendation: 'Buy',
-      reason: 'Weather conditions favor scoring'
-    },
-    {
-      id: '3',
-      game: 'Yankees vs Red Sox',
-      bet: 'Yankees ML',
-      odds: +125,
-      expectedValue: 5.7,
-      confidence: 71,
-      edgePercentage: 4.5,
-      recommendation: 'Strong Buy',
-      reason: 'Pitching matchup heavily favors Yankees'
-    }
-  ];
+  // LIVE DATA ONLY - NO HARDCODED VALUE BETS
+  const valueBets: any[] = [];
 
   const displayBets = limit ? valueBets.slice(0, limit) : valueBets;
 

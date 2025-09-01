@@ -32,13 +32,7 @@ import {
 } from 'lucide-react'
 import { cn, formatPercentage, formatCurrency } from '@/lib/utils'
 import { getAllSportsGames, getGameOdds } from '@/services/sportsRadarApi'
-import { 
-  getDemoProfitData, 
-  getDemoSportsPerformance, 
-  getDemoRiskDistribution, 
-  getDemoRecentBets,
-  shouldUseDemoData 
-} from '@/services/demoDataService'
+// Removed demo data imports - ONLY REAL DATA
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899']
 
@@ -141,16 +135,7 @@ export default function SportsAnalyticsDashboard() {
 
   const fetchLiveAnalytics = async () => {
     try {
-      // Check if we should use demo data
-      if (shouldUseDemoData()) {
-        console.log('Using demo data for analytics dashboard')
-        setProfitData(getDemoProfitData(8))
-        setSportsData(getDemoSportsPerformance())
-        setRiskDistribution(getDemoRiskDistribution())
-        setRecentBets(getDemoRecentBets())
-        setLoading(false)
-        return
-      }
+      console.log('FETCHING ONLY REAL DATA - NO DEMO DATA ALLOWED')
 
       // Fetch analytics data from API
       const days = timeRange === '1h' ? 1 : timeRange === '6h' ? 0.25 : timeRange === '24h' ? 1 : 7;
@@ -164,13 +149,13 @@ export default function SportsAnalyticsDashboard() {
       const { predictions, metrics } = analyticsResult.data
       const isDemo = analyticsResult.isDemo || false
 
-      // If API returned demo data, use our enhanced demo data instead
-      if (isDemo || (predictions.length === 0 && metrics.length === 0)) {
-        console.log('API returned empty/demo data, using enhanced demo data')
-        setProfitData(getDemoProfitData(8))
-        setSportsData(getDemoSportsPerformance())
-        setRiskDistribution(getDemoRiskDistribution())
-        setRecentBets(getDemoRecentBets())
+      // If no real data, show empty state - NO DEMO DATA
+      if (predictions.length === 0 && metrics.length === 0) {
+        console.log('No real data available - showing empty state')
+        setProfitData([])
+        setSportsData([])
+        setRiskDistribution([])
+        setRecentBets([])
         setLoading(false)
         return
       }
@@ -179,11 +164,11 @@ export default function SportsAnalyticsDashboard() {
 
       // Process profit data from database metrics
       const profitPoints = generateProfitData(metrics)
-      setProfitData(profitPoints.length > 0 ? profitPoints : getDemoProfitData(8))
+      setProfitData(profitPoints)
 
       // Process sports performance data
       const sportsPerf = await processSportsPerformance(liveGames, predictions)
-      setSportsData(sportsPerf.length > 0 ? sportsPerf : getDemoSportsPerformance())
+      setSportsData(sportsPerf)
 
       // Calculate risk distribution from predictions
       const riskDist = calculateRiskDistribution(predictions)
@@ -191,16 +176,16 @@ export default function SportsAnalyticsDashboard() {
 
       // Format recent high-value bets
       const valueBets = await formatRecentBets(predictions)
-      setRecentBets(valueBets.length > 0 ? valueBets : getDemoRecentBets())
+      setRecentBets(valueBets)
 
       setLoading(false)
     } catch (error) {
       console.error('Error fetching live analytics:', error)
-      // Use enhanced demo data if API fails
-      setProfitData(getDemoProfitData(8))
-      setSportsData(getDemoSportsPerformance())
-      setRiskDistribution(getDemoRiskDistribution())
-      setRecentBets(getDemoRecentBets())
+      // Show error state - NO DEMO DATA
+      setProfitData([])
+      setSportsData([])
+      setRiskDistribution([])
+      setRecentBets([])
       setLoading(false)
     }
   }

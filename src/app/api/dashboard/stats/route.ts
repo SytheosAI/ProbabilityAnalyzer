@@ -1,24 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/services/database';
-import { getDemoDashboardStats, shouldUseDemoData } from '@/services/demoDataService';
 import { getAllSportsGames } from '@/services/sportsRadarApi';
 import { DashboardStats } from '@/types/sports';
 
 export async function GET(request: NextRequest) {
   try {
-    // Check if we should use demo data
-    if (shouldUseDemoData()) {
-      console.log('Using demo data for dashboard stats');
-      const demoStats = getDemoDashboardStats();
-      
-      return NextResponse.json({
-        success: true,
-        data: demoStats,
-        isDemo: true
-      });
-    }
-
-    // Try to fetch real data
+    // LIVE DATA ONLY - NO DEMO DATA
     try {
       // Get recent predictions from database
       const [predictions, games] = await Promise.all([
@@ -58,19 +45,6 @@ export async function GET(request: NextRequest) {
         total_profit_potential: Math.round(profitPotential) || 0
       };
 
-      // If all values are zero, use demo data instead
-      if (stats.total_games_analyzed === 0 && stats.value_bets_found === 0) {
-        console.log('Real data returned zeros, switching to demo data');
-        const demoStats = getDemoDashboardStats();
-        
-        return NextResponse.json({
-          success: true,
-          data: demoStats,
-          isDemo: true,
-          message: 'Using demo data as real data is currently unavailable'
-        });
-      }
-
       return NextResponse.json({
         success: true,
         data: stats,
@@ -78,29 +52,40 @@ export async function GET(request: NextRequest) {
       });
 
     } catch (dbError) {
-      console.error('Database error, falling back to demo data:', dbError);
-      const demoStats = getDemoDashboardStats();
+      console.error('Database error:', dbError);
       
       return NextResponse.json({
-        success: true,
-        data: demoStats,
-        isDemo: true,
-        message: 'Using demo data due to database connection issues'
+        success: false,
+        data: {
+          total_games_analyzed: 0,
+          value_bets_found: 0,
+          avg_expected_value: 0,
+          avg_confidence: 0,
+          parlay_opportunities: 0,
+          arbitrage_opportunities: 0,
+          total_profit_potential: 0
+        },
+        isDemo: false,
+        error: 'Database connection error - no data available'
       });
     }
 
   } catch (error) {
     console.error('Dashboard stats API error:', error);
     
-    // Even on error, return demo data so the app shows something
-    const demoStats = getDemoDashboardStats();
-    
     return NextResponse.json({
-      success: true,
-      data: demoStats,
-      isDemo: true,
-      error: 'An error occurred, showing demo data',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      success: false,
+      data: {
+        total_games_analyzed: 0,
+        value_bets_found: 0,
+        avg_expected_value: 0,
+        avg_confidence: 0,
+        parlay_opportunities: 0,
+        arbitrage_opportunities: 0,
+        total_profit_potential: 0
+      },
+      isDemo: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 }

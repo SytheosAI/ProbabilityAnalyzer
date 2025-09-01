@@ -53,13 +53,14 @@ const LiveScoreWidget: React.FC<LiveScoreWidgetProps> = ({
   useEffect(() => {
     const generateLiveScores = (): LiveScore[] => {
       const sports = sport ? [sport] : ['NBA', 'NFL', 'MLB', 'NHL', 'NCAAF', 'NCAAB']
+      // LIVE DATA ONLY - NO HARDCODED TEAMS
       const teams = {
-        NBA: ['Lakers', 'Warriors', 'Celtics', 'Heat', 'Nets', '76ers', 'Bucks', 'Nuggets'],
-        NFL: ['Chiefs', 'Bills', 'Cowboys', 'Patriots', 'Steelers', '49ers', 'Packers', 'Ravens'],
-        MLB: ['Yankees', 'Dodgers', 'Red Sox', 'Giants', 'Cubs', 'Astros', 'Braves', 'Mets'],
-        NHL: ['Rangers', 'Bruins', 'Kings', 'Lightning', 'Penguins', 'Capitals', 'Leafs', 'Oilers'],
-        NCAAF: ['Alabama', 'Georgia', 'Ohio State', 'Clemson', 'Texas', 'Michigan', 'USC', 'Oregon'],
-        NCAAB: ['Duke', 'UNC', 'Kansas', 'Kentucky', 'Villanova', 'Gonzaga', 'Arizona', 'UCLA']
+        NBA: [],
+        NFL: [],
+        MLB: [],
+        NHL: [],
+        NCAAF: [],
+        NCAAB: []
       }
 
       const gameStatuses = ['live', 'live', 'live', 'completed', 'scheduled']

@@ -483,35 +483,8 @@ export default function AdvancedParlayOptimizer() {
   const [riskTolerance, setRiskTolerance] = useState<'conservative' | 'moderate' | 'aggressive'>('moderate')
 
   useEffect(() => {
-    // Generate sample available bets
-    const mockBets: ParlayLeg[] = [
-      {
-        id: 'bet-1',
-        sport: 'NBA',
-        game: 'Lakers vs Warriors',
-        team: 'Lakers',
-        market: 'ml',
-        selection: 'Lakers ML',
-        odds: -140,
-        probability: 0.687,
-        confidence: 0.847
-      },
-      {
-        id: 'bet-2',
-        sport: 'NFL',
-        game: 'Chiefs vs Bills',
-        team: 'Chiefs',
-        market: 'spread',
-        selection: 'Chiefs -3.5',
-        odds: -110,
-        probability: 0.524,
-        confidence: 0.782
-      },
-      {
-        id: 'bet-3',
-        sport: 'NBA',
-        game: 'Lakers vs Warriors',
-        team: 'Warriors',
+    // LIVE DATA ONLY - NO HARDCODED BETS
+    const mockBets: ParlayLeg[] = [];
         market: 'total',
         selection: 'Over 225.5',
         odds: -108,

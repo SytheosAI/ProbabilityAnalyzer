@@ -241,11 +241,7 @@ const InjuryReportWidget = () => (
     </CardHeader>
     
     <CardContent className="space-y-3">
-      {[
-        { player: 'LeBron James', team: 'Lakers', status: 'Questionable', impact: 'Line moved 3pts', game: 'vs Warriors' },
-        { player: 'Patrick Mahomes', team: 'Chiefs', status: 'Probable', impact: 'Minimal impact', game: '@ Bills' },
-        { player: 'Connor McDavid', team: 'Oilers', status: 'Out', impact: 'Total dropped 0.5', game: 'vs Flames' }
-      ].map((item, index) => (
+      {[].map((item, index) => (
         <div key={index} className="bg-slate-800/50 rounded-lg p-3">
           <div className="flex items-center justify-between mb-2">
             <span className="text-white font-medium text-sm">{item.player}</span>
@@ -285,35 +281,7 @@ export default function EnhancedDashboard() {
     publicFades: 18
   })
 
-  const [alerts, setAlerts] = useState<AlertItem[]>([
-    {
-      id: '1',
-      type: 'steam',
-      title: 'Steam Move Detected',
-      message: 'Lakers line moved from -3 to -5.5 in 15 minutes',
-      game: 'Lakers @ Warriors',
-      timestamp: new Date().toISOString(),
-      severity: 'high'
-    },
-    {
-      id: '2',
-      type: 'value',
-      title: 'High Value Bet',
-      message: '18.7% expected value found on Chiefs ML',
-      game: 'Chiefs @ Bills',
-      timestamp: new Date().toISOString(),
-      severity: 'medium'
-    },
-    {
-      id: '3',
-      type: 'arbitrage',
-      title: 'Arbitrage Opportunity',
-      message: '3.2% guaranteed profit across 3 books',
-      game: 'Celtics @ Heat',
-      timestamp: new Date().toISOString(),
-      severity: 'high'
-    }
-  ])
+  const [alerts, setAlerts] = useState<AlertItem[]>([])
 
   const [selectedTimeframe, setSelectedTimeframe] = useState<'1D' | '7D' | '30D'>('7D')
   const [isAutoRefresh, setIsAutoRefresh] = useState(true)
@@ -484,10 +452,10 @@ export default function EnhancedDashboard() {
         {/* Middle Column - Odds Movement and Weather */}
         <div className="space-y-6">
           <OddsMovementChart 
-            gameId="game-1"
-            homeTeam="Lakers"
-            awayTeam="Warriors"
-            sport="NBA"
+            gameId=""
+            homeTeam=""
+            awayTeam=""
+            sport=""
           />
           <WeatherImpactWidget />
           <InjuryReportWidget />
@@ -507,11 +475,7 @@ export default function EnhancedDashboard() {
             </CardHeader>
             
             <CardContent className="space-y-3">
-              {[
-                { game: 'Chiefs @ Bills', book: 'DraftKings', line: '-3.5', odds: '-108', best: true },
-                { game: 'Chiefs @ Bills', book: 'FanDuel', line: '-3.5', odds: '-112', best: false },
-                { game: 'Chiefs @ Bills', book: 'BetMGM', line: '-3', odds: '-105', best: false },
-              ].map((item, index) => (
+              {[].map((item, index) => (
                 <div key={index} className={cn(
                   "bg-slate-800/50 rounded-lg p-3 border-l-4",
                   item.best ? "border-green-500" : "border-transparent"

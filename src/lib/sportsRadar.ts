@@ -356,8 +356,8 @@ export async function getTodaysGames(sport: keyof typeof SPORT_CONFIGS): Promise
           const tournaments = await fetchSportsData(sport, SPORT_CONFIGS[sport].endpoints.schedule, { year });
           return { tournaments: tournaments?.tournaments || [] };
         } catch (error) {
-          console.log(`Using fallback data for golf due to API limitations`);
-          return generateFallbackSportsData(sport);
+          console.log(`No golf data available - API error`);
+          return { tournaments: [] };
         }
       
       case 'tennis':
@@ -366,8 +366,8 @@ export async function getTodaysGames(sport: keyof typeof SPORT_CONFIGS): Promise
           const date = formatDate(new Date());
           return await fetchSportsData(sport, SPORT_CONFIGS[sport].endpoints.dailySchedule, { date });
         } catch (error) {
-          console.log(`Using fallback data for tennis due to API limitations`);
-          return generateFallbackSportsData(sport);
+          console.log(`No tennis data available - API error`);
+          return { sport_events: [] };
         }
       
       case 'soccer':
@@ -384,8 +384,8 @@ export async function getTodaysGames(sport: keyof typeof SPORT_CONFIGS): Promise
             return await fetchSportsData(sport, SPORT_CONFIGS[sport].endpoints.dailySchedule, { date });
           }
         } catch (error) {
-          console.log(`Using fallback data for ${sport} due to API limitations`);
-          return generateFallbackSportsData(sport);
+          console.log(`No ${sport} data available - API error`);
+          return { schedules: [] };
         }
       
       case 'ufc':
@@ -394,8 +394,8 @@ export async function getTodaysGames(sport: keyof typeof SPORT_CONFIGS): Promise
           const date = formatDate(new Date());
           return await fetchSportsData(sport, SPORT_CONFIGS[sport].endpoints.schedule, { date });
         } catch (error) {
-          console.log(`Using fallback data for UFC due to API limitations`);
-          return generateFallbackSportsData(sport);
+          console.log(`No UFC data available - API error`);
+          return { events: [] };
         }
       
       case 'boxing':
@@ -404,132 +404,20 @@ export async function getTodaysGames(sport: keyof typeof SPORT_CONFIGS): Promise
           const date = formatDate(new Date());
           return await fetchSportsData(sport, SPORT_CONFIGS[sport].endpoints.events, { date });
         } catch (error) {
-          console.log(`Using fallback data for boxing due to API limitations`);
-          return generateFallbackSportsData(sport);
+          console.log(`No boxing data available - API error`);
+          return { events: [] };
         }
       
       default:
         throw new Error(`Unsupported sport for today's games: ${sport}`);
     }
   } catch (error) {
-    console.warn(`API error for ${sport}, using fallback data:`, error);
-    return generateFallbackSportsData(sport);
+    console.warn(`API error for ${sport} - returning empty data:`, error);
+    return {};
   }
 }
 
-// Generate fallback data for sports with API issues
-function generateFallbackSportsData(sport: string): any {
-  const sampleTeams: Record<string, string[]> = {
-    tennis: ['Novak Djokovic', 'Carlos Alcaraz', 'Jannik Sinner', 'Daniil Medvedev', 'Holger Rune', 'Alexander Zverev'],
-    soccer: ['Real Madrid', 'Barcelona', 'Bayern Munich', 'Liverpool', 'Man City', 'PSG', 'Arsenal', 'Chelsea'],
-    ufc: ['Jon Jones', 'Islam Makhachev', 'Israel Adesanya', 'Alex Pereira', 'Leon Edwards', 'Charles Oliveira'],
-    boxing: ['Canelo Alvarez', 'Tyson Fury', 'Errol Spence Jr', 'Terence Crawford', 'Gervonta Davis', 'Ryan Garcia'],
-    mls: ['Atlanta United', 'LA Galaxy', 'NYCFC', 'Seattle Sounders', 'Portland Timbers', 'LAFC', 'Miami', 'Nashville'],
-    golf: ['Scottie Scheffler', 'Jon Rahm', 'Rory McIlroy', 'Viktor Hovland', 'Patrick Cantlay', 'Xander Schauffele', 'Max Homa', 'Jordan Spieth']
-  };
-
-  const teams = sampleTeams[sport] || ['Team A', 'Team B', 'Team C', 'Team D'];
-  const events: any[] = [];
-
-  // Generate 3-5 sample events
-  for (let i = 0; i < 3 + Math.floor(Math.random() * 3); i++) {
-    const homeIndex = Math.floor(Math.random() * teams.length);
-    let awayIndex = Math.floor(Math.random() * teams.length);
-    while (awayIndex === homeIndex) {
-      awayIndex = Math.floor(Math.random() * teams.length);
-    }
-
-    const status = i === 0 ? 'live' : Math.random() > 0.5 ? 'scheduled' : 'completed';
-    const startTime = new Date(Date.now() + (i * 86400000)).toISOString();
-
-    if (sport === 'tennis') {
-      events.push({
-        id: `${sport}-${i}`,
-        competitors: [
-          { name: teams[homeIndex], qualifier: 'home' },
-          { name: teams[awayIndex], qualifier: 'away' }
-        ],
-        scheduled: startTime,
-        sport_event_status: { status: status === 'live' ? 'live' : status },
-        venue: { name: `${sport === 'tennis' ? 'Court' : 'Stadium'} ${i + 1}` }
-      });
-    } else if (sport === 'soccer' || sport === 'mls') {
-      events.push({
-        sport_event: {
-          id: `${sport}-${i}`,
-          competitors: [
-            { name: teams[homeIndex], qualifier: 'home' },
-            { name: teams[awayIndex], qualifier: 'away' }
-          ],
-          scheduled: startTime,
-          venue: { name: `Stadium ${i + 1}` }
-        },
-        sport_event_status: {
-          status: status === 'live' ? 'live' : status,
-          home_score: status !== 'scheduled' ? Math.floor(Math.random() * 4) : undefined,
-          away_score: status !== 'scheduled' ? Math.floor(Math.random() * 4) : undefined
-        }
-      });
-    } else if (sport === 'ufc' || sport === 'boxing') {
-      events.push({
-        id: `event-${i}`,
-        scheduled: startTime,
-        venue: { name: `Arena ${i + 1}` },
-        fights: [
-          {
-            id: `fight-${i}`,
-            competitors: [
-              { name: teams[homeIndex] },
-              { name: teams[awayIndex] }
-            ],
-            status: status,
-            scheduled: startTime
-          }
-        ]
-      });
-    }
-  }
-
-  // Special handling for golf tournaments
-  if (sport === 'golf') {
-    const tournaments = [];
-    const tournamentNames = ['The Masters', 'PGA Championship', 'US Open', 'The Open Championship', 'The Players Championship'];
-    
-    for (let i = 0; i < 2; i++) {
-      const leaderboard = [];
-      for (let j = 0; j < Math.min(10, teams.length); j++) {
-        leaderboard.push({
-          position: j + 1,
-          player: { name: teams[j] },
-          score: j === 0 ? -8 : -8 + j,
-          strokes: 272 + j,
-          rounds: [68, 70, 69, 65 + j]
-        });
-      }
-      
-      tournaments.push({
-        id: `tournament-${i}`,
-        name: tournamentNames[i % tournamentNames.length],
-        start_date: new Date(Date.now() - (i * 7 * 86400000)).toISOString(),
-        end_date: new Date(Date.now() + ((4 - i) * 86400000)).toISOString(),
-        status: i === 0 ? 'in_progress' : 'scheduled',
-        leaderboard: i === 0 ? leaderboard : undefined
-      });
-    }
-    return { tournaments };
-  }
-
-  // Return data in expected format
-  if (sport === 'tennis') {
-    return { sport_events: events };
-  } else if (sport === 'soccer' || sport === 'mls') {
-    return { schedules: events };
-  } else if (sport === 'ufc' || sport === 'boxing') {
-    return { events: events };
-  }
-
-  return { events };
-}
+// ALL FAKE DATA GENERATION REMOVED - LIVE DATA ONLY
 
 // Get standings for team sports
 export async function getStandings(sport: keyof typeof SPORT_CONFIGS): Promise<any> {

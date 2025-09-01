@@ -12,45 +12,8 @@ export function MoneylineBrowser({ sport, onSelectBet }: MoneylineBrowserProps) 
   const [selectedGames, setSelectedGames] = useState<string[]>([]);
   const [filter, setFilter] = useState('all');
 
-  // Mock data - in production this would come from your API
-  const games = [
-    {
-      id: '1',
-      sport: 'NFL',
-      home: 'Kansas City Chiefs',
-      away: 'Buffalo Bills',
-      homeOdds: -150,
-      awayOdds: +130,
-      time: '8:20 PM ET',
-      network: 'NBC',
-      spread: -3.5,
-      total: 48.5
-    },
-    {
-      id: '2',
-      sport: 'NBA',
-      home: 'Los Angeles Lakers',
-      away: 'Boston Celtics',
-      homeOdds: +110,
-      awayOdds: -130,
-      time: '10:30 PM ET',
-      network: 'TNT',
-      spread: +2.5,
-      total: 228.5
-    },
-    {
-      id: '3',
-      sport: 'NHL',
-      home: 'New York Rangers',
-      away: 'Tampa Bay Lightning',
-      homeOdds: -120,
-      awayOdds: +100,
-      time: '7:00 PM ET',
-      network: 'ESPN+',
-      spread: -1.5,
-      total: 6.5
-    }
-  ];
+  // LIVE DATA ONLY - NO HARDCODED GAMES
+  const games: any[] = [];
 
   const filteredGames = sport === 'all' 
     ? games 

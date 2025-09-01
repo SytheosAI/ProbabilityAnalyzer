@@ -285,33 +285,7 @@ export async function getSportGames(sport: string): Promise<SportData> {
     // Parse games
     const games = parseGameData(sportKey, rawData);
     
-    // Add mock moneyline odds for demonstration
-    games.forEach(game => {
-      if (game.status === 'scheduled') {
-        // Generate realistic-looking moneylines
-        const favorite = Math.random() > 0.5;
-        if (favorite) {
-          game.homeMoneyline = -150 - Math.floor(Math.random() * 200);
-          game.awayMoneyline = 120 + Math.floor(Math.random() * 150);
-        } else {
-          game.homeMoneyline = 110 + Math.floor(Math.random() * 150);
-          game.awayMoneyline = -140 - Math.floor(Math.random() * 200);
-        }
-        
-        // Add spread and total
-        game.spread = {
-          line: favorite ? -3.5 : 3.5,
-          homeOdds: -110,
-          awayOdds: -110
-        };
-        
-        game.total = {
-          line: 220 + Math.floor(Math.random() * 20),
-          overOdds: -110,
-          underOdds: -110
-        };
-      }
-    });
+    // NO FAKE ODDS - Only use odds from real APIs when available
     
     return {
       sport: config.name,
@@ -322,75 +296,17 @@ export async function getSportGames(sport: string): Promise<SportData> {
   } catch (error) {
     console.error(`Error fetching ${sport} games:`, error);
     
-    // Return sample data on error
+    // NO FAKE DATA - Return empty games on error
     return {
       sport: config.name,
-      games: generateSampleGames(sportKey),
+      games: [],
       lastUpdated: new Date().toISOString(),
-      dataSource: 'sample'
+      dataSource: 'live'
     };
   }
 }
 
-// Generate sample games for testing
-function generateSampleGames(sport: string): Game[] {
-  const sampleTeams: Record<string, string[]> = {
-    nba: ['Lakers', 'Warriors', 'Celtics', 'Heat', 'Nets', 'Suns'],
-    nfl: ['Patriots', 'Chiefs', 'Bills', 'Cowboys', 'Packers', 'Eagles'],
-    mlb: ['Yankees', 'Red Sox', 'Dodgers', 'Giants', 'Cubs', 'Cardinals'],
-    nhl: ['Rangers', 'Bruins', 'Lightning', 'Avalanche', 'Maple Leafs', 'Penguins'],
-    ncaamb: ['Duke', 'Kentucky', 'Kansas', 'North Carolina', 'UCLA', 'Gonzaga'],
-    ncaafb: ['Alabama', 'Georgia', 'Ohio State', 'Michigan', 'Texas', 'Oklahoma'],
-    wnba: ['Storm', 'Aces', 'Liberty', 'Sun', 'Mercury', 'Lynx'],
-    mls: ['Atlanta United', 'LA Galaxy', 'NYCFC', 'Seattle Sounders', 'Portland Timbers', 'LAFC'],
-    tennis: ['Djokovic', 'Alcaraz', 'Medvedev', 'Sinner', 'Rune', 'Tsitsipas'],
-    soccer: ['Real Madrid', 'Barcelona', 'Bayern Munich', 'Liverpool', 'Man City', 'PSG'],
-    ufc: ['Jon Jones', 'Israel Adesanya', 'Alex Pereira', 'Leon Edwards', 'Islam Makhachev', 'Charles Oliveira'],
-    boxing: ['Canelo Alvarez', 'Tyson Fury', 'Errol Spence Jr', 'Terence Crawford', 'Gervonta Davis', 'Ryan Garcia'],
-    golf: ['Scottie Scheffler', 'Jon Rahm', 'Rory McIlroy', 'Viktor Hovland', 'Patrick Cantlay', 'Xander Schauffele']
-  };
-  
-  const teams = sampleTeams[sport] || ['Team A', 'Team B', 'Team C', 'Team D'];
-  const games: Game[] = [];
-  
-  // Generate 3-6 sample games
-  const numGames = 3 + Math.floor(Math.random() * 4);
-  for (let i = 0; i < numGames; i++) {
-    const homeIndex = Math.floor(Math.random() * teams.length);
-    let awayIndex = Math.floor(Math.random() * teams.length);
-    while (awayIndex === homeIndex) {
-      awayIndex = Math.floor(Math.random() * teams.length);
-    }
-    
-    const status = ['scheduled', 'in_progress', 'completed'][Math.floor(Math.random() * 3)] as Game['status'];
-    const favorite = Math.random() > 0.5;
-    
-    games.push({
-      id: `sample-${sport}-${i}`,
-      homeTeam: teams[homeIndex],
-      awayTeam: teams[awayIndex],
-      homeScore: status !== 'scheduled' ? Math.floor(Math.random() * 100) : undefined,
-      awayScore: status !== 'scheduled' ? Math.floor(Math.random() * 100) : undefined,
-      status,
-      startTime: new Date(Date.now() + Math.random() * 86400000).toISOString(),
-      venue: `Stadium ${i + 1}`,
-      homeMoneyline: favorite ? -150 - Math.floor(Math.random() * 200) : 120 + Math.floor(Math.random() * 150),
-      awayMoneyline: favorite ? 120 + Math.floor(Math.random() * 150) : -150 - Math.floor(Math.random() * 200),
-      spread: {
-        line: favorite ? -3.5 : 3.5,
-        homeOdds: -110,
-        awayOdds: -110
-      },
-      total: {
-        line: 220 + Math.floor(Math.random() * 20),
-        overOdds: -110,
-        underOdds: -110
-      }
-    });
-  }
-  
-  return games;
-}
+// NO FAKE DATA GENERATION - This function has been removed
 
 // Get all games for all sports
 export async function getAllSportsGames(): Promise<SportData[]> {
@@ -412,12 +328,12 @@ export async function getAllSportsGames(): Promise<SportData[]> {
         return data;
       } catch (error) {
         console.error(`Error fetching ${sport}:`, error);
-        // Return sample data on error to ensure all sports are represented
+        // NO FAKE DATA - Return empty games on error
         return {
           sport: SPORT_CONFIGS[sport as keyof typeof SPORT_CONFIGS]?.name || sport.toUpperCase(),
-          games: generateSampleGames(sport),
+          games: [],
           lastUpdated: new Date().toISOString(),
-          dataSource: 'sample' as const
+          dataSource: 'live' as const
         };
       }
     })
@@ -435,58 +351,30 @@ export async function getAllSportsGames(): Promise<SportData[]> {
     !fetchedSports.has(SPORT_CONFIGS[sport as keyof typeof SPORT_CONFIGS]?.name.toLowerCase() || sport)
   );
   
-  // Add sample data for any missing sports
+  // NO FAKE DATA - Don't add sample data for missing sports
   missingSports.forEach(sport => {
-    console.log(`Adding sample data for missing sport: ${sport}`);
+    console.log(`No data available for sport: ${sport} - returning empty games`);
     successfulResults.push({
       sport: SPORT_CONFIGS[sport as keyof typeof SPORT_CONFIGS]?.name || sport.toUpperCase(),
-      games: generateSampleGames(sport),
+      games: [],
       lastUpdated: new Date().toISOString(),
-      dataSource: 'sample'
+      dataSource: 'live'
     });
   });
   
   return successfulResults;
 }
 
-// Search for teams across all sports
+// Search for teams across all sports - NO HARDCODED DATA
 export async function searchTeams(query: string): Promise<Team[]> {
-  // This would normally search the API, but for now return mock data
-  const allTeams: Team[] = [
-    // NBA
-    { id: 'lal', name: 'Lakers', city: 'Los Angeles', abbreviation: 'LAL', conference: 'Western', division: 'Pacific' },
-    { id: 'gsw', name: 'Warriors', city: 'Golden State', abbreviation: 'GSW', conference: 'Western', division: 'Pacific' },
-    { id: 'bos', name: 'Celtics', city: 'Boston', abbreviation: 'BOS', conference: 'Eastern', division: 'Atlantic' },
-    // NFL
-    { id: 'ne', name: 'Patriots', city: 'New England', abbreviation: 'NE', conference: 'AFC', division: 'East' },
-    { id: 'kc', name: 'Chiefs', city: 'Kansas City', abbreviation: 'KC', conference: 'AFC', division: 'West' },
-    // Add more teams as needed
-  ];
-  
-  const lowerQuery = query.toLowerCase();
-  return allTeams.filter(team => 
-    team.name.toLowerCase().includes(lowerQuery) ||
-    team.city?.toLowerCase().includes(lowerQuery) ||
-    team.abbreviation?.toLowerCase().includes(lowerQuery)
-  );
+  // TODO: Implement real API search when available
+  console.log(`Team search not implemented yet for query: "${query}"`);
+  return [];
 }
 
-// Search for players across all sports
+// Search for players across all sports - NO HARDCODED DATA
 export async function searchPlayers(query: string): Promise<Player[]> {
-  // This would normally search the API, but for now return mock data
-  const allPlayers: Player[] = [
-    // NBA
-    { id: 'lbj', name: 'LeBron James', team: 'Lakers', position: 'F', jersey: '23', status: 'active' },
-    { id: 'sc30', name: 'Stephen Curry', team: 'Warriors', position: 'G', jersey: '30', status: 'active' },
-    // NFL
-    { id: 'pm15', name: 'Patrick Mahomes', team: 'Chiefs', position: 'QB', jersey: '15', status: 'active' },
-    // Add more players as needed
-  ];
-  
-  const lowerQuery = query.toLowerCase();
-  return allPlayers.filter(player => 
-    player.name.toLowerCase().includes(lowerQuery) ||
-    player.team?.toLowerCase().includes(lowerQuery) ||
-    player.position?.toLowerCase().includes(lowerQuery)
-  );
+  // TODO: Implement real API search when available
+  console.log(`Player search not implemented yet for query: "${query}"`);
+  return [];
 }

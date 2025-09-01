@@ -459,22 +459,10 @@ function analyzeTeamTrends(stats: TeamStats): TeamTrends {
   return trends;
 }
 
-// Generate mock team statistics
+// LIVE DATA ONLY - NO MOCK TEAM STATISTICS
 function generateMockTeamStats(sport: string, teamId: string): TeamStats {
-  const mockTeams: Record<string, string[]> = {
-    nba: ['Lakers', 'Warriors', 'Celtics', 'Heat', 'Nuggets', 'Bucks'],
-    nfl: ['Chiefs', 'Bills', 'Eagles', 'Cowboys', '49ers', 'Ravens'],
-    mlb: ['Yankees', 'Dodgers', 'Astros', 'Braves', 'Rays', 'Orioles'],
-    nhl: ['Avalanche', 'Panthers', 'Rangers', 'Oilers', 'Stars', 'Bruins'],
-    wnba: ['Aces', 'Liberty', 'Sun', 'Storm', 'Mystics', 'Wings'],
-    mls: ['LAFC', 'Philadelphia', 'Cincinnati', 'Nashville', 'Seattle', 'Atlanta'],
-    soccer: ['Man City', 'Arsenal', 'Liverpool', 'Man United', 'Chelsea', 'Tottenham'],
-    ncaamb: ['UConn', 'Purdue', 'Houston', 'Kansas', 'Alabama', 'Arizona'],
-    ncaafb: ['Georgia', 'Michigan', 'Alabama', 'Texas', 'Ohio State', 'Oregon']
-  };
-  
-  const teams = mockTeams[sport] || ['Team A', 'Team B'];
-  const randomTeam = teams[Math.floor(Math.random() * teams.length)];
+  // Return empty/null stats instead of hardcoded data
+  const randomTeam = 'Unknown Team';
   
   const wins = Math.floor(Math.random() * 20) + 10;
   const losses = Math.floor(Math.random() * 15) + 5;

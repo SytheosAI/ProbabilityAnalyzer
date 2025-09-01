@@ -10,24 +10,21 @@ interface PerformanceTrackerProps {
 export function PerformanceTracker({ compact = false }: PerformanceTrackerProps) {
   const [timeRange, setTimeRange] = useState('7d');
 
+  // LIVE DATA ONLY - NO HARDCODED PERFORMANCE DATA
   const performanceData = {
-    totalBets: 247,
-    wins: 143,
-    losses: 104,
-    winRate: 57.9,
-    totalStaked: 24500,
-    totalReturned: 28750,
-    profit: 4250,
-    roi: 17.3,
-    avgOdds: -108,
-    bestDay: { date: 'Aug 28', profit: 850 },
-    worstDay: { date: 'Aug 25', profit: -320 },
-    streak: { type: 'win', count: 4 },
-    bySpor: [
-      { sport: 'NFL', bets: 68, winRate: 61.8, profit: 1450 },
-      { sport: 'NBA', bets: 92, winRate: 56.5, profit: 1200 },
-      { sport: 'MLB', bets: 87, winRate: 55.2, profit: 1600 }
-    ]
+    totalBets: 0,
+    wins: 0,
+    losses: 0,
+    winRate: 0,
+    totalStaked: 0,
+    totalReturned: 0,
+    profit: 0,
+    roi: 0,
+    avgOdds: 0,
+    bestDay: { date: '', profit: 0 },
+    worstDay: { date: '', profit: 0 },
+    streak: { type: 'none', count: 0 },
+    bySport: []
   };
 
   if (compact) {
