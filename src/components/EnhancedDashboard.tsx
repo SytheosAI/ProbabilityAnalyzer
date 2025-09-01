@@ -238,7 +238,11 @@ const WeatherImpactWidget = () => {
                   {item.severity}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mb-1">{item.weather}</p>
+              <p className="text-xs text-slate-400 mb-1">
+                {typeof item.weather === 'object' && item.weather !== null
+                  ? `${item.weather.temp || ''}°F, ${item.weather.condition || ''}, Wind: ${item.weather.windSpeed || 0}mph`
+                  : item.weather || 'No weather data'}
+              </p>
               <p className="text-xs text-blue-400">{item.impact}</p>
             </div>
           ))
