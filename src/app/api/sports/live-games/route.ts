@@ -47,6 +47,8 @@ export async function GET(req: NextRequest) {
       return spread > 7 && scoreDiff < 3;
     });
     
+    console.log(`[API] Returning ${filteredGames.length} games to frontend`);
+    
     return NextResponse.json({
       success: true,
       data: {

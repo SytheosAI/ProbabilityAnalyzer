@@ -85,7 +85,7 @@ export default function HomePage() {
   const [showAdvancedDropdown, setShowAdvancedDropdown] = useState(false)
   const [liveDataStats, setLiveDataStats] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>('PAGE LOADED - WAITING FOR DATA FETCH')
   const [selectedDays, setSelectedDays] = useState<1 | 3 | 5>(3)
   const dropdownRef = React.useRef<HTMLDivElement>(null)
 
@@ -114,14 +114,21 @@ export default function HomePage() {
     setIsLoading(true)
     setErrorMessage(null)
     
+    // FORCE VISIBLE OUTPUT
+    setErrorMessage('FETCHING DATA... CHECK CONSOLE')
+    
     try {
       // Try new live games API first
       const response = await fetch(`/api/sports/live-games?days=${selectedDays}`)
       const result = await response.json()
       
       console.log('API Response:', result) // DEBUG LOG
-      console.log('Games array:', result.data?.games) // DEBUG LOG
+      console.log('Games array:', result.data?.games?.slice(0, 3)) // Show first 3 games only
       console.log('Games length:', result.data?.games?.length) // DEBUG LOG
+      console.log('Success flag:', result.success) // DEBUG LOG
+      
+      // FORCE SHOW WHAT WE GOT
+      setErrorMessage(`FOUND ${result.data?.games?.length || 0} GAMES IN API`)
       
       if (result.success && result.data.games && result.data.games.length > 0) {
         // Calculate stats from the actual games data
@@ -199,6 +206,13 @@ export default function HomePage() {
     }
   }
 
+  // CRITICAL FIX: Actually call fetchLiveData on mount!
+  useEffect(() => {
+    console.log('📊 Dashboard mounted - fetching live data...')
+    setErrorMessage('FETCHING DATA NOW...')
+    fetchLiveData()
+  }, [selectedDays]) // Re-fetch when days change
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
       {/* Header */}
@@ -227,7 +241,7 @@ export default function HomePage() {
                 <option value={5}>Next 5 Days</option>
               </select>
               <div className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm font-medium animate-pulse">
-                LIVE DATA
+                LIVE DATA ({liveDataStats?.totalGames || 0} games)
               </div>
             </div>
             
@@ -355,7 +369,7 @@ export default function HomePage() {
 
 
         {activeTab === 'dashboard' && (
-          <EnhancedDashboard />
+          <EnhancedDashboard liveDataStats={liveDataStats} onRefresh={fetchLiveData} />
         )}
 
         {activeTab === 'moneylines' && (
