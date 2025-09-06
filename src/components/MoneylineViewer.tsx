@@ -82,36 +82,46 @@ export default function MoneylineViewer() {
     setError(null);
 
     try {
-      // Always use the working live-all endpoint
-      const response = await fetch('/api/sports/live-all');
+      // Use the unified odds endpoint for complete moneyline data
+      const response = await fetch('/api/sports/unified-odds');
       if (!response.ok) throw new Error('Failed to fetch games');
 
       const result = await response.json();
       
-      // Convert to expected format
+      // Process unified odds data
       const data = [];
       if (result.success && result.data) {
-        for (const sportData of result.data) {
-          if (selectedSport === 'All Sports' || sportData.sport === selectedSport) {
-            const sportGames = {
-              sport: sportData.sport,
-              games: sportData.games?.map((g: any) => ({
-                id: g.id,
-                homeTeam: g.home_team?.name || 'Home Team',
-                awayTeam: g.away_team?.name || 'Away Team',
-                homeScore: g.home_team?.score,
-                awayScore: g.away_team?.score,
-                status: g.status === 'inprogress' ? 'live' : g.status,
-                startTime: g.scheduled,
-                homeMoneyline: g.odds?.moneyline?.home || -110,
-                awayMoneyline: g.odds?.moneyline?.away || -110,
-                spread: g.odds?.spread,
-                total: g.odds?.total,
-                predictions: g.predictions
-              })) || []
-            };
-            data.push(sportGames);
+        // Group games by sport
+        const gamesBySport = result.data.reduce((acc: any, game: any) => {
+          if (selectedSport === 'All Sports' || game.sport === selectedSport) {
+            if (!acc[game.sport]) acc[game.sport] = [];
+            
+            acc[game.sport].push({
+              id: game.id,
+              homeTeam: game.homeTeam || 'Home Team',
+              awayTeam: game.awayTeam || 'Away Team',
+              homeScore: game.homeScore || 0,
+              awayScore: game.awayScore || 0,
+              status: game.status === 'inprogress' ? 'live' : 'scheduled',
+              startTime: game.startTime,
+              homeMoneyline: game.moneyline?.home || null,
+              awayMoneyline: game.moneyline?.away || null,
+              moneylineBook: game.moneyline?.homeBook || game.moneyline?.book || 'Multiple Books',
+              spread: game.spread,
+              total: game.total,
+              source: game.source,
+              bookmakers: game.bookmakers || 1
+            });
           }
+          return acc;
+        }, {});
+        
+        // Convert to expected format
+        for (const [sport, games] of Object.entries(gamesBySport)) {
+          data.push({
+            sport,
+            games: games as any[]
+          });
         }
       }
       
