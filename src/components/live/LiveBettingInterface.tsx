@@ -117,7 +117,7 @@ const LiveGameCard = ({
   onPlaceBet 
 }: { 
   game: LiveGame
-  odds: LiveOdds
+  odds: LiveOdds | null
   liveBets: LiveBet[]
   onPlaceBet: (bet: LiveBet) => void
 }) => {
@@ -310,33 +310,38 @@ const LiveGameCard = ({
           <div className="space-y-2">
             <h4 className="text-sm font-medium text-white">Key Player Performance</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {game.keyPlayers.map((player, index) => (
+              {Array.isArray(game.keyPlayers) && game.keyPlayers.length > 0 ? game.keyPlayers.map((player, index) => (
                 <div key={index} className="bg-slate-700/30 rounded p-2">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-white text-sm font-medium">{player.name}</span>
+                    <span className="text-white text-sm font-medium">{player?.name || 'Unknown Player'}</span>
                     <div className={cn(
                       "w-2 h-2 rounded-full",
-                      player.status === 'hot' ? 'bg-green-400' :
-                      player.status === 'cold' ? 'bg-red-400' : 'bg-slate-400'
+                      player?.status === 'hot' ? 'bg-green-400' :
+                      player?.status === 'cold' ? 'bg-red-400' : 'bg-slate-400'
                     )} />
                   </div>
-                  <p className="text-xs text-slate-400">{player.stats}</p>
+                  <p className="text-xs text-slate-400">{player?.stats || 'No stats available'}</p>
                 </div>
-              ))}
+              )) : (
+                <div className="col-span-2 text-center text-slate-400 text-sm py-4">
+                  No player performance data available
+                </div>
+              )}
             </div>
           </div>
         )}
 
         {/* Current Odds Movement */}
+        {odds && odds.movement && odds.moneyline && odds.spread && odds.total && (
         <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-700/50">
           <div className="text-center">
             <p className="text-xs text-slate-400">ML Movement</p>
             <div className="flex items-center justify-center space-x-1">
-              {odds.movement.ml === 'up' && <TrendingUp className="h-3 w-3 text-green-400" />}
-              {odds.movement.ml === 'down' && <TrendingDown className="h-3 w-3 text-red-400" />}
-              {odds.movement.ml === 'stable' && <Activity className="h-3 w-3 text-slate-400" />}
+              {odds.movement?.ml === 'up' && <TrendingUp className="h-3 w-3 text-green-400" />}
+              {odds.movement?.ml === 'down' && <TrendingDown className="h-3 w-3 text-red-400" />}
+              {odds.movement?.ml === 'stable' && <Activity className="h-3 w-3 text-slate-400" />}
               <span className="text-xs text-white">
-                {formatOdds(odds.moneyline.home)} / {formatOdds(odds.moneyline.away)}
+                {formatOdds(odds.moneyline?.home || 0)} / {formatOdds(odds.moneyline?.away || 0)}
               </span>
             </div>
           </div>
@@ -344,11 +349,11 @@ const LiveGameCard = ({
           <div className="text-center">
             <p className="text-xs text-slate-400">Spread</p>
             <div className="flex items-center justify-center space-x-1">
-              {odds.movement.spread === 'up' && <TrendingUp className="h-3 w-3 text-green-400" />}
-              {odds.movement.spread === 'down' && <TrendingDown className="h-3 w-3 text-red-400" />}
-              {odds.movement.spread === 'stable' && <Activity className="h-3 w-3 text-slate-400" />}
+              {odds.movement?.spread === 'up' && <TrendingUp className="h-3 w-3 text-green-400" />}
+              {odds.movement?.spread === 'down' && <TrendingDown className="h-3 w-3 text-red-400" />}
+              {odds.movement?.spread === 'stable' && <Activity className="h-3 w-3 text-slate-400" />}
               <span className="text-xs text-white">
-                {odds.spread.line > 0 ? '+' : ''}{odds.spread.line}
+                {(odds.spread?.line || 0) > 0 ? '+' : ''}{odds.spread?.line || 0}
               </span>
             </div>
           </div>
@@ -356,13 +361,14 @@ const LiveGameCard = ({
           <div className="text-center">
             <p className="text-xs text-slate-400">Total</p>
             <div className="flex items-center justify-center space-x-1">
-              {odds.movement.total === 'up' && <TrendingUp className="h-3 w-3 text-green-400" />}
-              {odds.movement.total === 'down' && <TrendingDown className="h-3 w-3 text-red-400" />}
-              {odds.movement.total === 'stable' && <Activity className="h-3 w-3 text-slate-400" />}
-              <span className="text-xs text-white">{odds.total.line}</span>
+              {odds.movement?.total === 'up' && <TrendingUp className="h-3 w-3 text-green-400" />}
+              {odds.movement?.total === 'down' && <TrendingDown className="h-3 w-3 text-red-400" />}
+              {odds.movement?.total === 'stable' && <Activity className="h-3 w-3 text-slate-400" />}
+              <span className="text-xs text-white">{odds.total?.line || 0}</span>
             </div>
           </div>
         </div>
+        )}
       </CardContent>
     </Card>
   )
@@ -399,15 +405,19 @@ export default function LiveBettingInterface() {
                   sport: sportData.sport,
                   homeTeam: game.home_team?.name || 'Home Team',
                   awayTeam: game.away_team?.name || 'Away Team',
-                  homeScore: game.home_points || 0,
-                  awayScore: game.away_points || 0,
-                  quarter: game.quarter || 'Unknown',
-                  timeRemaining: game.clock || 'Unknown',
+                  homeScore: Number(game.home_points) || 0,
+                  awayScore: Number(game.away_points) || 0,
+                  quarter: String(game.quarter || 'Unknown'),
+                  timeRemaining: String(game.clock || 'Unknown'),
                   status: 'live',
                   possession: game.possession,
-                  momentum: 0, // Calculate from real data
-                  lastPlay: 'Live game in progress',
-                  keyPlayers: game.players || []
+                  momentum: Number(game.momentum) || 0,
+                  lastPlay: String(game.lastPlay || 'Live game in progress'),
+                  keyPlayers: Array.isArray(game.players) ? game.players.map(player => ({
+                    name: player?.name || 'Unknown Player',
+                    stats: player?.stats || 'No stats available',
+                    status: (player?.status === 'hot' || player?.status === 'cold') ? player.status : 'normal'
+                  })) : []
                 }
                 
                 games.push(liveGame)
@@ -419,7 +429,7 @@ export default function LiveBettingInterface() {
                     moneyline: game.odds.moneyline || { home: 0, away: 0 },
                     spread: game.odds.spread || { line: 0, home: -110, away: -110 },
                     total: game.odds.total || { line: 0, over: -110, under: -110 },
-                    props: game.odds.props || [],
+                    props: Array.isArray(game.odds.props) ? game.odds.props : [],
                     lastUpdate: new Date().toISOString(),
                     movement: game.odds.movement || { ml: 'stable', spread: 'stable', total: 'stable' }
                   }
@@ -436,13 +446,14 @@ export default function LiveBettingInterface() {
           setLiveOdds(odds)
           setLiveBets(bets)
         } else {
-          // No live games available
+          // No live games available - set empty states
           setLiveGames([])
           setLiveOdds({})
           setLiveBets({})
         }
       } catch (error) {
         console.error('Failed to fetch live games:', error)
+        // Set empty states on error
         setLiveGames([])
         setLiveOdds({})
         setLiveBets({})
@@ -516,7 +527,7 @@ export default function LiveBettingInterface() {
           <LiveGameCard
             key={game.id}
             game={game}
-            odds={liveOdds[game.id]}
+            odds={liveOdds[game.id] || null}
             liveBets={liveBets[game.id] || []}
             onPlaceBet={handlePlaceBet}
           />

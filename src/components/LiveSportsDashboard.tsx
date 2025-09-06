@@ -310,24 +310,24 @@ export default function LiveSportsDashboard({
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <div className="flex items-center justify-between">
-                              <span className="text-white font-medium">{game.homeTeam.name}</span>
-                              <span className="text-xl font-bold text-white">{game.homeTeam.score || '-'}</span>
+                              <span className="text-white font-medium">{game.homeTeam?.name || 'Home Team'}</span>
+                              <span className="text-xl font-bold text-white">{game.homeTeam?.score || '-'}</span>
                             </div>
                             {game.prediction && (
                               <div className="text-sm text-slate-400">
-                                Win: {(game.prediction.homeWinProb * 100).toFixed(1)}%
+                                Win: {((game.prediction?.homeWinProb || 0) * 100).toFixed(1)}%
                               </div>
                             )}
                           </div>
                           
                           <div>
                             <div className="flex items-center justify-between">
-                              <span className="text-white font-medium">{game.awayTeam.name}</span>
-                              <span className="text-xl font-bold text-white">{game.awayTeam.score || '-'}</span>
+                              <span className="text-white font-medium">{game.awayTeam?.name || 'Away Team'}</span>
+                              <span className="text-xl font-bold text-white">{game.awayTeam?.score || '-'}</span>
                             </div>
                             {game.prediction && (
                               <div className="text-sm text-slate-400">
-                                Win: {(game.prediction.awayWinProb * 100).toFixed(1)}%
+                                Win: {((game.prediction?.awayWinProb || 0) * 100).toFixed(1)}%
                               </div>
                             )}
                           </div>
@@ -380,7 +380,7 @@ export default function LiveSportsDashboard({
                             {bet.sport}
                           </Badge>
                           <span className="text-white font-medium">
-                            {bet.game.homeTeam.name} vs {bet.game.awayTeam.name}
+                            {bet.game?.homeTeam?.name || 'Home Team'} vs {bet.game?.awayTeam?.name || 'Away Team'}
                           </span>
                         </div>
                         

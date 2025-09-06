@@ -114,8 +114,8 @@ export default function MoneylineViewer() {
     if (!game.homeMoneyline || !game.awayMoneyline) return undefined;
 
     // Calculate implied probabilities
-    const homeImplied = calculateImpliedProbability(game.homeMoneyline);
-    const awayImplied = calculateImpliedProbability(game.awayMoneyline);
+    const homeImplied = calculateImpliedProbability(game.homeMoneyline || 0);
+    const awayImplied = calculateImpliedProbability(game.awayMoneyline || 0);
 
     // Use real ML model predictions if available, otherwise use implied probability
     const homeModelProb = game.predictions?.homeWinProb || homeImplied;
@@ -124,7 +124,7 @@ export default function MoneylineViewer() {
     // Determine predicted winner
     const predictedWinner = homeModelProb > awayModelProb ? 'home' : 'away';
     const winnerProb = predictedWinner === 'home' ? homeModelProb : awayModelProb;
-    const winnerML = predictedWinner === 'home' ? game.homeMoneyline : game.awayMoneyline;
+    const winnerML = predictedWinner === 'home' ? (game.homeMoneyline || 0) : (game.awayMoneyline || 0);
 
     // Calculate expected value
     const expectedValue = calculateExpectedValue(winnerML, winnerProb);
@@ -140,7 +140,7 @@ export default function MoneylineViewer() {
     if (expectedValue > VALUE_THRESHOLDS.good) {
       reasoning.push('Positive expected value identified');
     }
-    if (game.spread && Math.abs(game.spread.line) < 3) {
+    if (game.spread && Math.abs(game.spread.line || 0) < 3) {
       reasoning.push('Close spread indicates competitive matchup');
     }
 

@@ -38,19 +38,19 @@ export function LiveOddsTracker({ sport, compact = false }: LiveOddsTrackerProps
   if (compact) {
     return (
       <div className="space-y-2">
-        {oddsData.slice(0, 3).map((odd) => (
-          <div key={odd.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+        {Array.isArray(oddsData) && oddsData.slice(0, 3).map((odd) => (
+          <div key={odd?.id || Math.random()} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
             <div>
-              <p className="font-medium text-sm text-gray-900 dark:text-white">{odd.bet}</p>
-              <p className="text-xs text-gray-600 dark:text-gray-400">{odd.game}</p>
+              <p className="font-medium text-sm text-gray-900 dark:text-white">{odd?.bet || 'Unknown Bet'}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">{odd?.game || 'Unknown Game'}</p>
             </div>
             <div className="flex items-center space-x-2">
               <span className={`text-sm font-bold ${
-                odd.movement === 'up' ? 'text-green-600' : 'text-red-600'
+                odd?.movement === 'up' ? 'text-green-600' : 'text-red-600'
               }`}>
-                {odd.currentOdds}
+                {odd?.currentOdds || 0}
               </span>
-              {odd.movement === 'up' ? (
+              {odd?.movement === 'up' ? (
                 <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
                 </svg>
@@ -68,9 +68,9 @@ export function LiveOddsTracker({ sport, compact = false }: LiveOddsTrackerProps
 
   return (
     <div className="space-y-4">
-      {oddsData.map((odd, index) => (
+      {Array.isArray(oddsData) && oddsData.map((odd, index) => (
         <motion.div
-          key={odd.id}
+          key={odd?.id || index}
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: index * 0.1 }}
@@ -78,15 +78,15 @@ export function LiveOddsTracker({ sport, compact = false }: LiveOddsTrackerProps
         >
           <div className="flex items-start justify-between mb-4">
             <div>
-              <h4 className="font-semibold text-gray-900 dark:text-white">{odd.bet}</h4>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{odd.game}</p>
+              <h4 className="font-semibold text-gray-900 dark:text-white">{odd?.bet || 'Unknown Bet'}</h4>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{odd?.game || 'Unknown Game'}</p>
             </div>
             <div className="text-right">
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {odd.currentOdds > 0 ? '+' : ''}{odd.currentOdds}
+                {(odd?.currentOdds || 0) > 0 ? '+' : ''}{odd?.currentOdds || 0}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                from {odd.openingOdds}
+                from {odd?.openingOdds || 0}
               </p>
             </div>
           </div>

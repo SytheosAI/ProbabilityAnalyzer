@@ -38,15 +38,15 @@ export default function TestPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <p className="text-sm text-gray-600">Total Sports</p>
-              <p className="text-2xl font-bold">{overview.summary?.totalSports}</p>
+              <p className="text-2xl font-bold">{overview.summary?.totalSports || 0}</p>
             </div>
             <div>
               <p className="text-sm text-gray-600">Available</p>
-              <p className="text-2xl font-bold text-green-600">{overview.summary?.availableSports}</p>
+              <p className="text-2xl font-bold text-green-600">{overview.summary?.availableSports || 0}</p>
             </div>
             <div>
               <p className="text-sm text-gray-600">Total Games</p>
-              <p className="text-2xl font-bold text-blue-600">{overview.summary?.totalGames}</p>
+              <p className="text-2xl font-bold text-blue-600">{overview.summary?.totalGames || 0}</p>
             </div>
             <div>
               <p className="text-sm text-gray-600">Live Games</p>
