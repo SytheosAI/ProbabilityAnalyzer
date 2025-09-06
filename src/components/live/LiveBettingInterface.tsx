@@ -385,7 +385,8 @@ export default function LiveBettingInterface() {
   useEffect(() => {
     const fetchLiveGames = async () => {
       try {
-        const response = await fetch('/api/live-games?includeOdds=true&includeStats=true')
+        // Use the working live-all endpoint
+        const response = await fetch('/api/sports/live-all')
         const data = await response.json()
         
         if (data.success && data.data) {

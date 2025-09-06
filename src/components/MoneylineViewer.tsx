@@ -82,14 +82,38 @@ export default function MoneylineViewer() {
     setError(null);
 
     try {
-      const endpoint = selectedSport === 'All Sports' 
-        ? '/api/sports/all-games'
-        : `/api/sports/${selectedSport.toLowerCase()}/games`;
-
-      const response = await fetch(endpoint);
+      // Always use the working live-all endpoint
+      const response = await fetch('/api/sports/live-all');
       if (!response.ok) throw new Error('Failed to fetch games');
 
-      const data = await response.json();
+      const result = await response.json();
+      
+      // Convert to expected format
+      const data = [];
+      if (result.success && result.data) {
+        for (const sportData of result.data) {
+          if (selectedSport === 'All Sports' || sportData.sport === selectedSport) {
+            const sportGames = {
+              sport: sportData.sport,
+              games: sportData.games?.map((g: any) => ({
+                id: g.id,
+                homeTeam: g.home_team?.name || 'Home Team',
+                awayTeam: g.away_team?.name || 'Away Team',
+                homeScore: g.home_team?.score,
+                awayScore: g.away_team?.score,
+                status: g.status === 'inprogress' ? 'live' : g.status,
+                startTime: g.scheduled,
+                homeMoneyline: g.odds?.moneyline?.home || -110,
+                awayMoneyline: g.odds?.moneyline?.away || -110,
+                spread: g.odds?.spread,
+                total: g.odds?.total,
+                predictions: g.predictions
+              })) || []
+            };
+            data.push(sportGames);
+          }
+        }
+      }
       
       // Add ML predictions to games
       const enhancedData = Array.isArray(data) ? data : [data];
